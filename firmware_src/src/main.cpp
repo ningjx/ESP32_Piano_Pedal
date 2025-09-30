@@ -5,13 +5,12 @@
 #include <WiFi.h>
 #include <esp_wifi.h>
 #include "esp_adc_cal.h"
-// 用于禁用蓝牙堆栈，防止与 WiFi 同时工作时卡死
 #include "esp_bt.h"
 #include "esp_bt_main.h"
 
 #define DEBUG
 
-// 调试宏：定义 DEBUG 时启用串口调试输出，否则编译为空操作，节省资源
+// 调试宏
 #ifdef DEBUG
 #define DBG_BEGIN(baud) Serial.begin(baud)
 #define DBG_PRINT(...) Serial.print(__VA_ARGS__)
@@ -37,8 +36,7 @@ Preferences prefs;
 // DAC配置
 #define DAC_Sustain_PIN 25   // 延音踏板电压输出
 #define DAC_Sostenuto_PIN 26 // 持音踏板电压输出
-// 开关型踏板输出（因为只有俩DAC，所以还有一个踏板只能用开关了）
-#define Switch_Soft_PIN 17
+#define Switch_Soft_PIN 17   // 开关型踏板输出（因为只有俩DAC，所以还有一个踏板只能用开关了）
 
 // ADC配置
 #define ADC_Sustain_PIN 32   // ADC1_CH4 (GPIO32)延音踏板检测霍尔
@@ -67,9 +65,8 @@ int Sostenuto_Pedal_MAX;
 int Soft_Pedal_MIN;
 int Soft_Pedal_MAX;
 
-// 校准状态
+// 校准功能相关参数
 bool InCalibration = false;
-// 校准超时相关
 unsigned long calibrationStartMs = 0;
 const unsigned long calibrationTimeoutMs = 20000; // 20 秒超时
 bool calibrationCanceled = false;
@@ -99,9 +96,7 @@ unsigned long GetPageturnerContinueTime(bool isDown);
 void setup()
 {
   setCpuFrequencyMhz(80);
-  //#ifdef DEBUG
-  //setCpuFrequencyMhz(240);
-  //#endif
+  
   DBG_BEGIN(115200);
 
   // 读取配置
@@ -175,15 +170,15 @@ void setup()
   短踩持音踏板下一页，长踩踏板上一页
   当连接蓝牙之后，踏板的持音功能将不可用，断开蓝牙后恢复正常
   **/
-  if (!otaPortalActive())//WIFI更新固件和蓝牙翻页不能同时使用
+  if (!otaPortalActive()) // WIFI更新固件和蓝牙翻页不能同时使用
     bleKeyboard.begin();
 }
 
 void loop()
 {
-  #ifdef DEBUG
+#ifdef DEBUG
   unsigned long loopStartMs = millis();
-  #endif
+#endif
 
   // 校准模式
   if (InCalibration)
@@ -271,7 +266,7 @@ void loop()
     bool pageTurnerDown = false;
     if (sostenutoValue > 100)
       pageTurnerDown = true;
-    else if (sostenutoValue < 80)
+    else if (sostenutoValue < 90)
       pageTurnerDown = false;
 
     unsigned long downTime = GetPageturnerContinueTime(pageTurnerDown);
@@ -440,8 +435,7 @@ int AdcRemap(int pin, int minV, int maxV, float deadZonePct)
     return 0;
 
   // 应用死区 (deadZonePct 例如 0.05 表示 5%)
-  float dz = deadZonePct;
-  dz = constrain(dz, 0.0f, 0.45f); // 防止死区重叠
+  float dz = constrain(deadZonePct, 0.0f, 0.45f); // 防止死区重叠
 
   int reminV = minV + (maxV - minV) * dz;
   int remaxV = maxV - (maxV - minV) * dz;
@@ -480,8 +474,10 @@ int AdcRemap(int pin, int minV, int maxV, float deadZonePct)
       // 限制单次步进，避免过快跳变但保持低延迟响应
       const int maxStep = 12; // 0..255 空间下单次最大变化
       int step = emaInt - s_lastOut[idx];
-      if (step > maxStep) step = maxStep;
-      else if (step < -maxStep) step = -maxStep;
+      if (step > maxStep)
+        step = maxStep;
+      else if (step < -maxStep)
+        step = -maxStep;
       s_lastOut[idx] = s_lastOut[idx] + step;
     }
   }
@@ -518,10 +514,8 @@ void BeepTone(int degree, int duration_ms)
   // 基础音阶（C4..B4）频率，单位 Hz
   const uint16_t freqs[7] = {262, 294, 330, 349, 392, 440, 494};
   if (degree < 1 || degree > 7)
-  {
-    // 如果为 0 或越界则不发声
     return;
-  }
+
   uint16_t freq = freqs[degree - 1];
   // 使用 ledcWriteTone 产生指定频率
   ledcWriteTone(PWM_CHANNEL, freq);
