@@ -8,7 +8,7 @@
 #include "esp_bt.h"
 #include "esp_bt_main.h"
 
-#define DEBUG
+//#define DEBUG
 
 // 调试宏
 #ifdef DEBUG
@@ -39,9 +39,9 @@ Preferences prefs;
 #define Switch_Soft_PIN 17   // 开关型踏板输出（因为只有俩DAC，所以还有一个踏板只能用开关了）
 
 // ADC配置
-#define ADC_Sustain_PIN 32   // ADC1_CH4 (GPIO32)延音踏板检测霍尔
-#define ADC_Sostenuto_PIN 33 // ADC1_CH5 (GPIO33)持音踏板检测霍尔
-#define ADC_Soft_PIN 35      // ADC1_CH7 (GPIO35)弱音踏板检测霍尔
+#define ADC_Sustain_PIN 35   // ADC1_CH4 (GPIO32)延音踏板检测霍尔
+#define ADC_Sostenuto_PIN 32 // ADC1_CH5 (GPIO33)持音踏板检测霍尔
+#define ADC_Soft_PIN 33      // ADC1_CH7 (GPIO35)弱音踏板检测霍尔
 
 // 按钮配置（低电平有效）
 #define Sustain_BUTTON_PIN 27   // 延音踏板检测按钮
