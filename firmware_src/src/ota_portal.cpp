@@ -5,7 +5,7 @@
 #include <DNSServer.h>
 #include <Preferences.h>
 
-#define DEBUG
+//#define DEBUG
 
 // 调试宏（与 main.cpp 保持一致）：定义 DEBUG 时启用，否则为空操作
 #ifdef DEBUG
