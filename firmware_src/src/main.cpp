@@ -181,6 +181,10 @@ void setup()
 
 void loop()
 {
+  #ifdef DEBUG
+  unsigned long loopStartMs = millis();
+  #endif
+
   // 校准模式
   if (InCalibration)
   {
@@ -284,9 +288,9 @@ void loop()
     }
   }
 
-  // 日志打印
-  // DBG_PRINTF("[状态] 延音输入%d | 持音输入:%d | 弱音输入:%d\n", sustainValue, sostenutoValue, softValue);
-  delay(1);
+  // 日志打印（前三项固定三位宽，前导零）
+  DBG_PRINTF("[状态] 延音输入:%03d | 持音输入:%03d | 弱音输入:%03d | 开销:%dms\n", sustainValue, sostenutoValue, softValue, millis() - loopStartMs);
+  delay(10);
 }
 
 // 带防抖的按钮检测函数
@@ -426,7 +430,11 @@ unsigned long GetPageturnerContinueTime(bool isDown)
 // 将 ADC（基于校准范围）映射到 0 -255
 int AdcRemap(int pin, int minV, int maxV, float deadZonePct)
 {
-  int adcValue = analogRead(pin);
+  // 快速多次采样，降低量化与瞬时噪声（低延迟：无额外delay）
+  int raw0 = analogRead(pin);
+  int raw1 = analogRead(pin);
+  int raw2 = analogRead(pin);
+  int adcValue = (raw0 + raw1 + raw2) / 3;
   int adcVoltage = esp_adc_cal_raw_to_voltage(adcValue, &adc_chars);
   if (maxV <= minV)
     return 0;
@@ -440,7 +448,45 @@ int AdcRemap(int pin, int minV, int maxV, float deadZonePct)
   int adcVol = constrain(adcVoltage, reminV, remaxV);
   // 计算百分比
   float pct = (float)(adcVol - reminV) / (float)(remaxV - reminV);
-  int value = 255 * pct;
+  int valueRaw = 255 * pct;
+
+  // 低延迟平滑与消抖：自适应EMA + 步进限幅 + 微抖动死区
+  int idx = pin % 40;
+  static bool s_inited[40] = {false};
+  static float s_ema[40] = {0};
+  static int s_lastOut[40] = {0};
+
+  if (!s_inited[idx])
+  {
+    s_inited[idx] = true;
+    s_ema[idx] = (float)valueRaw;
+    s_lastOut[idx] = valueRaw;
+  }
+  else
+  {
+    float delta = (float)valueRaw - s_ema[idx];
+    float alpha = (abs((int)delta) > 15) ? 0.7f : 0.2f; // 大幅变化快速跟随，小抖动更稳
+    s_ema[idx] = s_ema[idx] + alpha * delta;
+
+    int emaInt = (int)(s_ema[idx] + (s_ema[idx] >= 0 ? 0.5f : -0.5f));
+
+    // 微抖动死区：差值≤1 不更新，避免1级跳动
+    if (abs(emaInt - s_lastOut[idx]) <= 1)
+    {
+      // 保持上次输出
+    }
+    else
+    {
+      // 限制单次步进，避免过快跳变但保持低延迟响应
+      const int maxStep = 12; // 0..255 空间下单次最大变化
+      int step = emaInt - s_lastOut[idx];
+      if (step > maxStep) step = maxStep;
+      else if (step < -maxStep) step = -maxStep;
+      s_lastOut[idx] = s_lastOut[idx] + step;
+    }
+  }
+
+  int value = constrain(s_lastOut[idx], 0, 255);
   // if (pin == ADC_Sostenuto_PIN)
   //   DBG_PRINTF("[状态] adc%d | 电压:%d | 死区:%f | 范围:%d-%d | 重设电压:%d | 百分比:%f | 映射:%d\n", adcValue, adcVoltage, value, dz, reminV, remaxV, adcVol, pct);
 
