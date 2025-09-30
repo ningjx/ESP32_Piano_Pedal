@@ -25,8 +25,8 @@
 #endif
 
 /**
-  三个按钮的上拉电阻不焊了，用内部上拉，
-  按键只焊接一个持音踏板的按钮就够了，
+  三个按钮的上拉电阻（R7，R8，R9）可以不焊，用内部上拉，
+  按键只焊接一个持音踏板的按钮（SW9）就够了，
   用来触发校准功能，一旦校准完成，
   就可以用霍尔传感器检测三个踏板的位置，
   并且将三个踏板作为开关触发其他功能
@@ -99,9 +99,9 @@ unsigned long GetPageturnerContinueTime(bool isDown);
 void setup()
 {
   setCpuFrequencyMhz(80);
-  #ifdef DEBUG
-  setCpuFrequencyMhz(240);
-  #endif
+  //#ifdef DEBUG
+  //setCpuFrequencyMhz(240);
+  //#endif
   DBG_BEGIN(115200);
 
   // 读取配置
@@ -143,7 +143,7 @@ void setup()
   // OTA更新功能
   // 开机时踩住[弱音踏板]，则启动 OTA 上传固件网页
   int sustainValue = AdcRemap(ADC_Soft_PIN, Sustain_Pedal_MIN, Sustain_Pedal_MAX);
-  if (1) //(sustainValue > 127)
+  if (sustainValue > 127) //(1)
   {
     BeepTone(1, 120);
     BeepTone(3, 120);
@@ -175,7 +175,7 @@ void setup()
   短踩持音踏板下一页，长踩踏板上一页
   当连接蓝牙之后，踏板的持音功能将不可用，断开蓝牙后恢复正常
   **/
-  if (!otaPortalActive())
+  if (!otaPortalActive())//WIFI更新固件和蓝牙翻页不能同时使用
     bleKeyboard.begin();
 }
 
@@ -286,7 +286,7 @@ void loop()
 
   // 日志打印
   // DBG_PRINTF("[状态] 延音输入%d | 持音输入:%d | 弱音输入:%d\n", sustainValue, sostenutoValue, softValue);
-  delay(50);
+  delay(1);
 }
 
 // 带防抖的按钮检测函数
