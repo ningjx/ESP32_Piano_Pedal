@@ -7,6 +7,8 @@
 #include "esp_adc_cal.h"
 #include "esp_bt.h"
 #include "esp_bt_main.h"
+#include "esp_pm.h"
+#include "esp_task_wdt.h"
 
 // #define DEBUG
 
@@ -95,10 +97,21 @@ void BeepTone(int degree, int duration_ms);
 unsigned long GetPageturnerContinueTime(bool isDown);
 void ReadBluetoothActive();
 void SaveBluetoothActive();
+void ShutdownBluetooth();
 
 void setup()
 {
-  setCpuFrequencyMhz(80);
+  // 功耗优化：配置动态电源管理
+  esp_pm_config_esp32_t pm_config = {
+    .max_freq_mhz = 80,
+    .min_freq_mhz = 10,  // 最低频率，空闲时自动降频
+    .light_sleep_enable = true  // 启用轻睡眠模式
+  };
+  esp_pm_configure(&pm_config);
+
+  // 启用看门狗定时器，防止系统卡死
+  esp_task_wdt_init(30, true); // 30秒超时
+  esp_task_wdt_add(NULL);
 
   DBG_BEGIN(115200);
 
@@ -150,11 +163,7 @@ void setup()
     BeepTone(5, 100);
     BeepTone(6, 100);
     // 禁用蓝牙堆栈以避免 WiFi OTA 时与 BLE 冲突导致卡死
-    // 尝试安全地停用蓝牙控制器和蓝牙守护进程
-    esp_bluedroid_disable();
-    esp_bluedroid_deinit();
-    esp_bt_controller_disable();
-    esp_bt_controller_deinit();
+    ShutdownBluetooth();
     delay(100);
     otaPortalBegin();
   }
@@ -196,15 +205,15 @@ void setup()
   }
   else
   {
-    esp_bluedroid_disable();
-    esp_bluedroid_deinit();
-    esp_bt_controller_disable();
-    esp_bt_controller_deinit();
+    ShutdownBluetooth();
   }
 }
 
 void loop()
 {
+  // 喂看门狗
+  esp_task_wdt_reset();
+  
 #ifdef DEBUG
   unsigned long loopStartMs = millis();
 #endif
@@ -373,6 +382,15 @@ void ReadBluetoothActive()
   prefs.end();
 }
 
+// 统一的蓝牙关闭函数
+void ShutdownBluetooth()
+{
+  esp_bluedroid_disable();
+  esp_bluedroid_deinit();
+  esp_bt_controller_disable();
+  esp_bt_controller_deinit();
+}
+
 // 霍尔范围校准
 void StartCalibration()
 {
@@ -416,8 +434,9 @@ void FinishCalibration()
 // 检测长按
 bool CheckButtonLong(int pin, unsigned long holdMs)
 {
-  static unsigned long pinStartTimes[40] = {0};
-  int idx = pin % 40;
+  // 优化：只使用实际使用的引脚索引
+  static unsigned long pinStartTimes[3] = {0};
+  int idx = (pin == Sustain_BUTTON_PIN) ? 0 : (pin == Sostenuto_BUTTON_PIN) ? 1 : 2;
   if (digitalRead(pin) == LOW)
   {
     if (pinStartTimes[idx] == 0)
@@ -488,10 +507,11 @@ int AdcRemap(int pin, int minV, int maxV, float deadZonePct)
   int valueRaw = 255 * pct;
 
   // 低延迟平滑与消抖：自适应EMA + 步进限幅 + 微抖动死区
-  int idx = pin % 40;
-  static bool s_inited[40] = {false};
-  static float s_ema[40] = {0};
-  static int s_lastOut[40] = {0};
+  // 优化：只使用3个踏板对应的索引，减少内存占用
+  int idx = (pin == ADC_Sustain_PIN) ? 0 : (pin == ADC_Sostenuto_PIN) ? 1 : 2;
+  static bool s_inited[3] = {false};
+  static float s_ema[3] = {0};
+  static int s_lastOut[3] = {0};
 
   if (!s_inited[idx])
   {
