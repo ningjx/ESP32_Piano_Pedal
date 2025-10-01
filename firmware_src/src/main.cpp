@@ -103,9 +103,9 @@ void setup()
 {
   // 功耗优化：配置动态电源管理
   esp_pm_config_esp32_t pm_config = {
-    .max_freq_mhz = 80,
-    .min_freq_mhz = 10,  // 最低频率，空闲时自动降频
-    .light_sleep_enable = true  // 启用轻睡眠模式
+      .max_freq_mhz = 80,
+      .min_freq_mhz = 10,        // 最低频率，空闲时自动降频
+      .light_sleep_enable = true // 启用轻睡眠模式
   };
   esp_pm_configure(&pm_config);
 
@@ -150,6 +150,7 @@ void setup()
   if (digitalRead(Calibrate_Button) == LOW)
   {
     StartCalibration();
+    return;
   }
 
   // OTA更新功能
@@ -213,7 +214,7 @@ void loop()
 {
   // 喂看门狗
   esp_task_wdt_reset();
-  
+
 #ifdef DEBUG
   unsigned long loopStartMs = millis();
 #endif
@@ -421,14 +422,17 @@ void FinishCalibration()
     SaveCalibration();
     // 蜂鸣提示
     BeepTone(5, 240);
-    DBG_PRINTLN("校准完成");
+    DBG_PRINTLN("校准完成，3秒后自动重启...");
   }
   else
   {
-    DBG_PRINTLN("校准已被取消，未保存本次参数");
+    DBG_PRINTLN("校准已被取消，未保存本次参数，3秒后自动重启...");
   }
   calibrationStartMs = 0;
   calibrationCanceled = false;
+
+  delay(3000);
+  ESP.restart();
 }
 
 // 检测长按

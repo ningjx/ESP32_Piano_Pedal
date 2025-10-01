@@ -5,7 +5,7 @@
 #include <DNSServer.h>
 #include <Preferences.h>
 
-//#define DEBUG
+// #define DEBUG
 
 // 调试宏（与 main.cpp 保持一致）：定义 DEBUG 时启用，否则为空操作
 #ifdef DEBUG
@@ -85,13 +85,16 @@ const char index_html[] PROGMEM = R"rawliteral(
     .progress > i{display:block;height:100%;width:0;background:linear-gradient(90deg,#4caf50,#8bc34a);transition:width 150ms}
     .status{margin-top:8px;font-size:13px}
     .small{font-size:12px;color:#888}
-    .vprogress{width:60px;height:140px;background:#eee;border-radius:8px;position:relative;margin:8px auto}
-    .vprogress>i{position:absolute;left:0;bottom:0;width:100%;height:0;background:linear-gradient(180deg,#4caf50,#8bc34a);transition:height 120ms}
+    .vprogress{width:60px;height:140px;background:#eee;border-radius:8px;position:relative;margin:8px auto;overflow:hidden}
+    .vprogress>i{position:absolute;left:0;bottom:0;width:100%;height:0;background:linear-gradient(180deg,#4caf50,#8bc34a);transition:height 120ms;border-radius:0 0 8px 8px}
     .pedal-row{display:flex;gap:12px;justify-content:space-between}
     .pedal-label{font-weight:600;margin-bottom:6px}
     .vprogress .vmax, .vprogress .vmin{position:absolute;left:50%;transform:translateX(-50%);color:#444;font-size:12px;font-weight:600}
     .vprogress .vmax{top:6px}
     .vprogress .vmin{bottom:6px}
+    .copy-btn{display:inline-block;margin-left:6px;padding:2px 6px;border:1px solid #ccc;border-radius:3px;background:#f8f9fa;color:#666;font-size:11px;cursor:pointer;transition:all 0.2s}
+    .copy-btn:hover{background:#e9ecef;border-color:#999}
+    .copy-btn:active{background:#dee2e6;transform:scale(0.95)}
   </style>
 </head>
 <body>
@@ -113,7 +116,7 @@ const char index_html[] PROGMEM = R"rawliteral(
     <div class="row">
       <div class="progress"><i id="bar"></i></div>
       <div class="status" id="status">准备就绪</div>
-      <div class="small">提示：若浏览器未自动打开本页，请在地址栏输入 <strong>http://192.168.4.1</strong></div>
+      <div class="small">提示：若浏览器未自动打开本页，请在地址栏输入 <strong style="color:#0078d4;">http://192.168.4.1</strong> <button id="copyBtn" class="copy-btn" onclick="copyToClipboard()" title="复制地址">📋</button></div>
     </div>
 
     <!-- 三个竖向进度条显示踏板实时状态 -->
@@ -203,6 +206,59 @@ const char index_html[] PROGMEM = R"rawliteral(
       }).catch(e=>{ /* ignore network errors while uploading */ });
     }
     setInterval(updatePedals, 100);
+
+    // 复制地址到剪贴板功能
+    function copyToClipboard() {
+      const url = 'http://192.168.4.1';
+      const btn = document.getElementById('copyBtn');
+      
+      if (navigator.clipboard && window.isSecureContext) {
+        // 现代浏览器支持 Clipboard API
+        navigator.clipboard.writeText(url).then(() => {
+          showCopyFeedback(btn, '✓');
+        }).catch(() => {
+          fallbackCopy(url, btn);
+        });
+      } else {
+        // 降级方案
+        fallbackCopy(url, btn);
+      }
+    }
+
+    // 降级复制方案
+    function fallbackCopy(text, btn) {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      
+      try {
+        document.execCommand('copy');
+        showCopyFeedback(btn, '✓');
+      } catch (err) {
+        showCopyFeedback(btn, '✗');
+      }
+      
+      document.body.removeChild(textArea);
+    }
+
+    // 显示复制反馈
+    function showCopyFeedback(btn, icon) {
+      const originalText = btn.innerHTML;
+      btn.innerHTML = icon;
+      btn.style.background = icon === '✓' ? '#d4edda' : '#f8d7da';
+      btn.style.borderColor = icon === '✓' ? '#c3e6cb' : '#f5c6cb';
+      
+      setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.style.background = '#f8f9fa';
+        btn.style.borderColor = '#ccc';
+      }, 1500);
+    }
   </script>
 </body>
 </html>
