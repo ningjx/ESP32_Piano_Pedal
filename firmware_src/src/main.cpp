@@ -8,7 +8,7 @@
 #include "esp_bt.h"
 #include "esp_bt_main.h"
 
-//#define DEBUG
+// #define DEBUG
 
 // 调试宏
 #ifdef DEBUG
@@ -76,6 +76,7 @@ bool calibrationCanceled = false;
 
 // 蓝牙模式
 int Bluetooth_Mode; // 0:关闭 1:蓝牙MIDI 2:蓝牙键盘
+bool Bluetooth_Active = false;
 
 // 蓝牙键盘
 BleKeyboard bleKeyboard("翻页器", "Ning", 100);
@@ -92,15 +93,18 @@ bool CheckButtonLong(int pin, unsigned long holdMs);
 int AdcRemap(int pin, int minV, int maxV, float deadZonePct = 0.05f);
 void BeepTone(int degree, int duration_ms);
 unsigned long GetPageturnerContinueTime(bool isDown);
+void ReadBluetoothActive();
+void SaveBluetoothActive();
 
 void setup()
 {
   setCpuFrequencyMhz(80);
-  
+
   DBG_BEGIN(115200);
 
   // 读取配置
   ReadCalibration();
+  ReadBluetoothActive();
 
   // 配置按钮引脚（启用内部上拉）
   pinMode(Sustain_BUTTON_PIN, INPUT_PULLUP);
@@ -125,10 +129,10 @@ void setup()
 
   /**
   校准功能
-  开机时踩住[持音踏板]，进入校准模式并蜂鸣(Do So)提示开始校准
+  开机时踩住[持音踏板]，进入校准模式并蜂鸣(Do Sol)提示开始校准
   将三个踏板分别踩到底和松开，记录最大最小值
   踩住[持音踏板]2秒完成校准并保存，蜂鸣(Do长音)提示
-  如果没有主动结束校准，则校准模式会在20秒后自动关闭，蜂鸣(So Do)提示，并且不保存本次校准结果
+  如果没有主动结束校准，则校准模式会在20秒后自动关闭，蜂鸣(Sol Do)提示，并且不保存本次校准结果
   **/
   if (digitalRead(Calibrate_Button) == LOW)
   {
@@ -137,12 +141,14 @@ void setup()
 
   // OTA更新功能
   // 开机时踩住[弱音踏板]，则启动 OTA 上传固件网页
-  int sustainValue = AdcRemap(ADC_Soft_PIN, Sustain_Pedal_MIN, Sustain_Pedal_MAX);
-  if (sustainValue > 127) //(1)
+  int softValue = AdcRemap(ADC_Soft_PIN, Soft_Pedal_MIN, Soft_Pedal_MAX);
+  if (softValue > 127)
   {
-    BeepTone(1, 120);
-    BeepTone(3, 120);
-    BeepTone(5, 120);
+    BeepTone(1, 100);
+    BeepTone(2, 100);
+    BeepTone(3, 100);
+    BeepTone(5, 100);
+    BeepTone(6, 100);
     // 禁用蓝牙堆栈以避免 WiFi OTA 时与 BLE 冲突导致卡死
     // 尝试安全地停用蓝牙控制器和蓝牙守护进程
     esp_bluedroid_disable();
@@ -165,13 +171,36 @@ void setup()
   }
 
   /**
-  蓝牙翻页功能(开启OTA模式时，请勿启动此功能，避免内存溢出死机)
+  蓝牙翻页功能（开启OTA模式时，会关闭此功能，避免内存溢出死机）
+  开机时踩住[延音踏板]，以切换蓝牙开关，当蓝牙为开时，有提示音（Mi Sol Si）
   使用平板或手机等设备连接名为[翻页器]的蓝牙设备
   短踩持音踏板下一页，长踩踏板上一页
   当连接蓝牙之后，踏板的持音功能将不可用，断开蓝牙后恢复正常
   **/
-  if (!otaPortalActive()) // WIFI更新固件和蓝牙翻页不能同时使用
+  int sustainValue = AdcRemap(ADC_Sustain_PIN, Sustain_Pedal_MIN, Sustain_Pedal_MAX);
+  if (sustainValue > 127)
+  {
+    Bluetooth_Active = !Bluetooth_Active;
+    SaveBluetoothActive();
+    if (Bluetooth_Active)
+    {
+      BeepTone(3, 120);
+      BeepTone(5, 120);
+      BeepTone(7, 120);
+    }
+  }
+
+  if (!otaPortalActive() && Bluetooth_Active) // WIFI更新固件和蓝牙翻页不能同时使用
+  {
     bleKeyboard.begin();
+  }
+  else
+  {
+    esp_bluedroid_disable();
+    esp_bluedroid_deinit();
+    esp_bt_controller_disable();
+    esp_bt_controller_deinit();
+  }
 }
 
 void loop()
@@ -328,6 +357,20 @@ void ReadCalibration()
   prefs.end();
   DBG_PRINTF("[读取参数] Sustain MIN=%dmV MAX=%dmV | Sostenuto MIN=%dmV MAX=%dmV | Soft MIN=%dmV MAX=%dmV\n",
              Sustain_Pedal_MIN, Sustain_Pedal_MAX, Sostenuto_Pedal_MIN, Sostenuto_Pedal_MAX, Soft_Pedal_MIN, Soft_Pedal_MAX);
+}
+
+void SaveBluetoothActive()
+{
+  prefs.begin("config", false);
+  prefs.putBool("bluetooth_active", Bluetooth_Active);
+  prefs.end();
+}
+
+void ReadBluetoothActive()
+{
+  prefs.begin("config", false);
+  Bluetooth_Active = prefs.getBool("bluetooth_active", false);
+  prefs.end();
 }
 
 // 霍尔范围校准
