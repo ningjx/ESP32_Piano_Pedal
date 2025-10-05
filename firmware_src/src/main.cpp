@@ -286,12 +286,12 @@ void loop()
   int softValue = AdcRemap(ADC_Soft_PIN, Soft_Pedal_MIN, Soft_Pedal_MAX);
 
   // 输出延音信号
-  dacWrite(DAC_Sustain_PIN, sustainValue * 2 / 3);
+  dacWrite(DAC_Sustain_PIN, (uint8_t)(sustainValue * 2 / 3.3));
 
   // 输出持音信号
   // 如果连接蓝牙翻页，就不再输出持音踏板信号
   if (!bleKeyboard.isConnected())
-    dacWrite(DAC_Sostenuto_PIN, sostenutoValue * 2 / 3);
+    dacWrite(DAC_Sostenuto_PIN, (uint8_t)(sostenutoValue * 2 / 3.3));
 
   // 输出弱音开关信号
   // 控制 Switch_Soft: 若 Soft_BUTTON 按下则高电平，否则低
