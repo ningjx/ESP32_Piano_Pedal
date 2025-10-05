@@ -215,9 +215,7 @@ void loop()
   // 喂看门狗
   esp_task_wdt_reset();
 
-#ifdef DEBUG
   unsigned long loopStartMs = millis();
-#endif
 
   // 校准模式
   if (InCalibration)
@@ -322,9 +320,16 @@ void loop()
     }
   }
 
-  // 日志打印（前三项固定三位宽，前导零）
-  // DBG_PRINTF("[状态] 延音输入:%03d | 持音输入:%03d | 弱音输入:%03d | 开销:%dms\n", sustainValue, sostenutoValue, softValue, millis() - loopStartMs);
-  delay(10);
+  unsigned long loopMs = millis() - loopStartMs;
+  // DBG_PRINTF("[状态] 延音输入:%03d | 持音输入:%03d | 弱音输入:%03d | 开销:%dms\n", sustainValue, sostenutoValue, softValue, loopMs);
+  if (loopMs < 10)
+  {
+    delay(10 - loopMs);
+  }
+  else
+  {
+    delay(0);
+  }
 }
 
 // 带防抖的按钮检测函数
