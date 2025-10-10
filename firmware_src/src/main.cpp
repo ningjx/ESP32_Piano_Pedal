@@ -53,6 +53,8 @@ Preferences prefs;
 // 功能按键绑定
 #define Calibrate_Button Sostenuto_BUTTON_PIN // 持音踏板按钮触发校准功能
 
+const float Max_DAC_Voltage = 1.7f; // DAC输出的最大电压
+
 // 蜂鸣器PWM配置
 #define BUZZER_PIN 16
 const int PWM_CHANNEL = 0;    // LEDC通道0
@@ -286,12 +288,12 @@ void loop()
   int softValue = AdcRemap(ADC_Soft_PIN, Soft_Pedal_MIN, Soft_Pedal_MAX);
 
   // 输出延音信号
-  dacWrite(DAC_Sustain_PIN, (uint8_t)(sustainValue * 2 / 3.3));
+  dacWrite(DAC_Sustain_PIN, (uint8_t)(sustainValue * Max_DAC_Voltage / 3.3));
 
   // 输出持音信号
   // 如果连接蓝牙翻页，就不再输出持音踏板信号
   if (!bleKeyboard.isConnected())
-    dacWrite(DAC_Sostenuto_PIN, (uint8_t)(sostenutoValue * 2 / 3.3));
+    dacWrite(DAC_Sostenuto_PIN, (uint8_t)(sostenutoValue * Max_DAC_Voltage / 3.3));
 
   // 输出弱音开关信号
   // 控制 Switch_Soft: 若 Soft_BUTTON 按下则高电平，否则低
@@ -377,14 +379,14 @@ void ReadCalibration()
 void SaveBluetoothActive()
 {
   prefs.begin("config", false);
-  prefs.putBool("bluetooth_active", Bluetooth_Active);
+  prefs.putBool("blactive", Bluetooth_Active);
   prefs.end();
 }
 
 void ReadBluetoothActive()
 {
   prefs.begin("config", false);
-  Bluetooth_Active = prefs.getBool("bluetooth_active", false);
+  Bluetooth_Active = prefs.getBool("blactive", false);
   prefs.end();
 }
 
@@ -445,7 +447,8 @@ bool CheckButtonLong(int pin, unsigned long holdMs)
 {
   // 优化：只使用实际使用的引脚索引
   static unsigned long pinStartTimes[3] = {0};
-  int idx = (pin == Sustain_BUTTON_PIN) ? 0 : (pin == Sostenuto_BUTTON_PIN) ? 1 : 2;
+  int idx = (pin == Sustain_BUTTON_PIN) ? 0 : (pin == Sostenuto_BUTTON_PIN) ? 1
+                                                                            : 2;
   if (digitalRead(pin) == LOW)
   {
     if (pinStartTimes[idx] == 0)
@@ -517,7 +520,8 @@ int AdcRemap(int pin, int minV, int maxV, float deadZonePct)
 
   // 低延迟平滑与消抖：自适应EMA + 步进限幅 + 微抖动死区
   // 优化：只使用3个踏板对应的索引，减少内存占用
-  int idx = (pin == ADC_Sustain_PIN) ? 0 : (pin == ADC_Sostenuto_PIN) ? 1 : 2;
+  int idx = (pin == ADC_Sustain_PIN) ? 0 : (pin == ADC_Sostenuto_PIN) ? 1
+                                                                      : 2;
   static bool s_inited[3] = {false};
   static float s_ema[3] = {0};
   static int s_lastOut[3] = {0};
