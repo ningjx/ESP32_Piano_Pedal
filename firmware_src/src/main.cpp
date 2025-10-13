@@ -148,6 +148,7 @@ void setup()
   将三个踏板分别踩到底和松开，记录最大最小值
   踩住[持音踏板]2秒完成校准并保存，蜂鸣(Do长音)提示
   如果没有主动结束校准，则校准模式会在20秒后自动关闭，蜂鸣(Sol Do)提示，并且不保存本次校准结果
+  校准完成后自动重启
   **/
   if (digitalRead(Calibrate_Button) == LOW)
   {
@@ -160,11 +161,11 @@ void setup()
   int softValue = AdcRemap(ADC_Soft_PIN, Soft_Pedal_MIN, Soft_Pedal_MAX);
   if (softValue > 127)
   {
-    BeepTone(1, 100);
-    BeepTone(2, 100);
-    BeepTone(3, 100);
-    BeepTone(5, 100);
-    BeepTone(6, 100);
+    BeepTone(1, 120);
+    BeepTone(2, 120);
+    BeepTone(3, 120);
+    BeepTone(5, 120);
+    BeepTone(6, 120);
     // 禁用蓝牙堆栈以避免 WiFi OTA 时与 BLE 冲突导致卡死
     ShutdownBluetooth();
     delay(100);
@@ -183,14 +184,14 @@ void setup()
   }
 
   /**
-  蓝牙翻页功能（开启OTA模式时，会关闭此功能，避免内存溢出死机）
+  蓝牙翻页功能（开启OTA模式时，需要关闭蓝牙，避免内存溢出死机）
   开机时踩住[延音踏板]，以切换蓝牙开关，当蓝牙为开时，有提示音（Mi Sol Si）
   使用平板或手机等设备连接名为[翻页器]的蓝牙设备
   短踩持音踏板下一页，长踩踏板上一页
   当连接蓝牙之后，踏板的持音功能将不可用，断开蓝牙后恢复正常
   **/
   int sustainValue = AdcRemap(ADC_Sustain_PIN, Sustain_Pedal_MIN, Sustain_Pedal_MAX);
-  if (sustainValue > 127)
+  if (!otaPortalActive() && sustainValue > 127)
   {
     Bluetooth_Active = !Bluetooth_Active;
     SaveBluetoothActive();
@@ -202,7 +203,7 @@ void setup()
     }
   }
 
-  if (!otaPortalActive() && Bluetooth_Active) // WIFI更新固件和蓝牙翻页不能同时使用
+  if (!otaPortalActive() && Bluetooth_Active)
   {
     bleKeyboard.begin();
   }
