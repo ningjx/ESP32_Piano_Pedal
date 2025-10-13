@@ -76,7 +76,7 @@ const unsigned long calibrationTimeoutMs = 20000; // 20 秒超时
 bool calibrationCanceled = false;
 
 // 翻页功能踩下计时
-#define LongPressTimeMs 1000
+#define LongPressTimeMs 500
 
 // 蓝牙模式
 int Bluetooth_Mode; // 0:关闭 1:蓝牙MIDI 2:蓝牙键盘
