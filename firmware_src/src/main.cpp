@@ -53,6 +53,9 @@ Preferences prefs;
 // 功能按键绑定
 #define Calibrate_Button Sostenuto_BUTTON_PIN // 持音踏板按钮触发校准功能
 
+// 主循环延时
+#define Main_Loop_DelayMs 5
+
 const float Max_DAC_Voltage = 1.7f; // DAC输出的最大电压
 
 // 蜂鸣器PWM配置
@@ -325,9 +328,9 @@ void loop()
 
   unsigned long loopMs = millis() - loopStartMs;
   // DBG_PRINTF("[状态] 延音输入:%03d | 持音输入:%03d | 弱音输入:%03d | 开销:%dms\n", sustainValue, sostenutoValue, softValue, loopMs);
-  if (loopMs < 10)
+  if (loopMs < Main_Loop_DelayMs)
   {
-    delay(10 - loopMs);
+    delay(Main_Loop_DelayMs - loopMs);
   }
   else
   {
