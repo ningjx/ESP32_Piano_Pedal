@@ -5,6 +5,11 @@
 #include <DNSServer.h>
 #include <Preferences.h>
 
+// 若未通过 build_flags 提供 FW_VERSION，则使用默认值
+#ifndef FW_VERSION
+#define FW_VERSION "unknown"
+#endif
+
 // #define DEBUG
 
 // 调试宏（与 main.cpp 保持一致）：定义 DEBUG 时启用，否则为空操作
@@ -100,6 +105,7 @@ const char index_html[] PROGMEM = R"rawliteral(
 <body>
   <div class="card">
     <h1>延音踏板 固件在线更新</h1>
+    <p class="note small">当前固件版本：)rawliteral" FW_VERSION R"rawliteral(</p>
     <p class="note" style="color:#d32f2f;font-weight:bold;">注意：使用在线更新功能时无法使用蓝牙翻页</p>
     <p class="note">在此页面上传编译生成的固件（.bin）。上传完成设备将自动重启。</p>
 

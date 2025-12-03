@@ -153,11 +153,17 @@ void setup()
   如果没有主动结束校准，则校准模式会在20秒后自动关闭，蜂鸣(Sol Do)提示，并且不保存本次校准结果
   校准完成后自动重启
   **/
-  if (digitalRead(Calibrate_Button) == LOW)
+  int sV = esp_adc_cal_raw_to_voltage(analogRead(ADC_Sostenuto_PIN), &adc_chars);
+  if (sV > 1500)
   {
     StartCalibration();
     return;
   }
+  //if (digitalRead(Calibrate_Button) == LOW)
+  //{
+  //  StartCalibration();
+  //  return;
+  //}
 
   // OTA更新功能
   // 开机时踩住[弱音踏板]，则启动 OTA 上传固件网页
