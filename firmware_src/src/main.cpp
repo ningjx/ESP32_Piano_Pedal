@@ -56,7 +56,7 @@ Preferences prefs;
 // 主循环延时
 #define Main_Loop_DelayMs 5
 
-const float Max_DAC_Voltage = 1.8f; // DAC输出的最大电压
+const float Max_DAC_Voltage = 1.9f; // DAC输出的最大电压
 
 // 蜂鸣器PWM配置
 #define BUZZER_PIN 16
