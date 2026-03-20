@@ -176,16 +176,17 @@ const char index_html[] PROGMEM = R"rawliteral(
     /* 半踏范围滑动标志样式 */
     .half-marker{position:absolute;left:-8px;width:76px;height:4px;background:#ff9800;cursor:ns-resize;z-index:10;opacity:0.8;border-radius:2px}
     .half-marker:hover{opacity:1;background:#f57c00}
-    .half-marker::after{content:attr(data-val);position:absolute;right:-50px;top:-6px;font-size:10px;color:#ff9800;font-weight:600}
+    .half-marker::after{content:attr(data-val);position:absolute;right:-4px;top:-18px;font-size:10px;color:#ff9800;font-weight:600}
     .half-marker.upper{background:#2196f3}
     .half-marker.upper:hover{background:#1976d2}
     .half-marker.upper::after{color:#2196f3}
     .half-zone{position:absolute;left:0;width:100%;background:rgba(255,152,0,0.15);pointer-events:none}
     .half-label{font-size:11px;color:#ff9800;margin-top:4px}
-    /* 电压设置样式 */
-    .voltage-row{display:flex;align-items:center;gap:8px;margin-top:6px;justify-content:center}
-    .voltage-select{padding:4px 6px;border:1px solid #ccc;border-radius:4px;font-size:12px;background:#fff;cursor:pointer}
-    .voltage-unit{font-size:12px;color:#666}
+    /* 设置区域样式 */
+    .settings-section{margin-top:20px;padding-top:16px;border-top:1px solid #eee}
+    .settings-row{display:flex;align-items:center;gap:12px;margin:8px 0}
+    .settings-label{font-size:13px;color:#444;min-width:100px}
+    .settings-select{padding:6px 10px;border:1px solid #ccc;border-radius:4px;font-size:13px;background:#fff;cursor:pointer;min-width:80px}
   </style>
 </head>
 <body>
@@ -237,44 +238,48 @@ const char index_html[] PROGMEM = R"rawliteral(
           </div>
           <div class="small" id="v2_txt">0 mV</div>
           <div class="half-label" id="halfLabel">半踏范围: 1500 - 2500 mV</div>
-          <div class="voltage-row">
-            <span class="small">半踏电压:</span>
-            <select id="voltageSelect" class="voltage-select">
-              <option value="0.1">0.1V</option>
-              <option value="0.2">0.2V</option>
-              <option value="0.3">0.3V</option>
-              <option value="0.4">0.4V</option>
-              <option value="0.5">0.5V</option>
-              <option value="0.6">0.6V</option>
-              <option value="0.7">0.7V</option>
-              <option value="0.8">0.8V</option>
-              <option value="0.9">0.9V</option>
-              <option value="1.0">1.0V</option>
-              <option value="1.1">1.1V</option>
-              <option value="1.2">1.2V</option>
-              <option value="1.3">1.3V</option>
-              <option value="1.4">1.4V</option>
-              <option value="1.5">1.5V</option>
-              <option value="1.6">1.6V</option>
-              <option value="1.7" selected>1.7V</option>
-              <option value="1.8">1.8V</option>
-              <option value="1.9">1.9V</option>
-              <option value="2.0">2.0V</option>
-              <option value="2.1">2.1V</option>
-              <option value="2.2">2.2V</option>
-              <option value="2.3">2.3V</option>
-              <option value="2.4">2.4V</option>
-              <option value="2.5">2.5V</option>
-              <option value="2.6">2.6V</option>
-              <option value="2.7">2.7V</option>
-              <option value="2.8">2.8V</option>
-              <option value="2.9">2.9V</option>
-              <option value="3.0">3.0V</option>
-              <option value="3.1">3.1V</option>
-              <option value="3.2">3.2V</option>
-            </select>
-          </div>
         </div>
+      </div>
+    </div>
+
+    <!-- 设置区域 -->
+    <div class="settings-section">
+      <div class="settings-row">
+        <span class="settings-label">半踏电压:</span>
+        <select id="voltageSelect" class="settings-select">
+          <option value="0.1">0.1V</option>
+          <option value="0.2">0.2V</option>
+          <option value="0.3">0.3V</option>
+          <option value="0.4">0.4V</option>
+          <option value="0.5">0.5V</option>
+          <option value="0.6">0.6V</option>
+          <option value="0.7">0.7V</option>
+          <option value="0.8">0.8V</option>
+          <option value="0.9">0.9V</option>
+          <option value="1.0">1.0V</option>
+          <option value="1.1">1.1V</option>
+          <option value="1.2">1.2V</option>
+          <option value="1.3">1.3V</option>
+          <option value="1.4">1.4V</option>
+          <option value="1.5">1.5V</option>
+          <option value="1.6">1.6V</option>
+          <option value="1.7" selected>1.7V</option>
+          <option value="1.8">1.8V</option>
+          <option value="1.9">1.9V</option>
+          <option value="2.0">2.0V</option>
+          <option value="2.1">2.1V</option>
+          <option value="2.2">2.2V</option>
+          <option value="2.3">2.3V</option>
+          <option value="2.4">2.4V</option>
+          <option value="2.5">2.5V</option>
+          <option value="2.6">2.6V</option>
+          <option value="2.7">2.7V</option>
+          <option value="2.8">2.8V</option>
+          <option value="2.9">2.9V</option>
+          <option value="3.0">3.0V</option>
+          <option value="3.1">3.1V</option>
+          <option value="3.2">3.2V</option>
+        </select>
       </div>
     </div>
   </div>
@@ -397,7 +402,7 @@ const char index_html[] PROGMEM = R"rawliteral(
     }
     function onDragEnd() {
       if (dragging) {
-        // 保存设置到设备
+        // 拖动结束，保存设置到设备
         fetch('/setHalfPedal?lower=' + halfLower + '&upper=' + halfUpper);
       }
       dragging = null;
@@ -416,6 +421,21 @@ const char index_html[] PROGMEM = R"rawliteral(
       halfVoltage = parseFloat(voltageSelectEl.value);
       fetch('/setHalfPedal?voltage=' + halfVoltage);
     });
+
+    // 网页加载时获取一次半踏设置
+    function loadHalfPedalSettings() {
+      fetch('/status').then(r=>r.json()).then(j=>{
+        if (j.halfPedal) {
+          halfLower = j.halfPedal.lower;
+          halfUpper = j.halfPedal.upper;
+          if (j.halfPedal.voltage !== undefined) {
+            halfVoltage = j.halfPedal.voltage;
+          }
+          updateHalfMarkers();
+        }
+      });
+    }
+    loadHalfPedalSettings();
 
     // 轮询 /status 更新三个踏板的竖向进度条
     function updatePedals(){
@@ -436,16 +456,9 @@ const char index_html[] PROGMEM = R"rawliteral(
           if (i === 2) {
             sustainMin = p.min;
             sustainMax = p.max;
+            // 更新滑动标志位置（使用本地值）
+            updateHalfMarkers();
           }
-        }
-        // 更新半踏范围（从服务器获取，mV值）
-        if (j.halfPedal) {
-          halfLower = j.halfPedal.lower;
-          halfUpper = j.halfPedal.upper;
-          if (j.halfPedal.voltage !== undefined) {
-            halfVoltage = j.halfPedal.voltage;
-          }
-          updateHalfMarkers();
         }
       }).catch(e=>{ /* ignore network errors while uploading */ });
     }
