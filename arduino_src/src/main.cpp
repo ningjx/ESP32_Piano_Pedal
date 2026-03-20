@@ -72,6 +72,12 @@ int Sostenuto_Pedal_MAX;
 int Soft_Pedal_MIN;
 int Soft_Pedal_MAX;
 
+// 半踏深度范围设定（延音踏板）
+// 使用mV值表示，与踏板校准范围一致
+int Sustain_HalfPedal_Lower_mV = 1500;  // 半踏范围下限（mV）
+int Sustain_HalfPedal_Upper_mV = 2500;  // 半踏范围上限（mV）
+float HalfPedal_Voltage = 1.7f;         // 半踏输出电压（可配置）
+
 // 校准功能相关参数
 bool InCalibration = false;
 unsigned long calibrationStartMs = 0;
@@ -103,6 +109,13 @@ unsigned long GetPageturnerContinueTime(bool isDown);
 void ReadBluetoothActive();
 void SaveBluetoothActive();
 void ShutdownBluetooth();
+void SaveHalfPedalRange();
+void ReadHalfPedalRange();
+int GetSustainHalfPedalLower_mV();
+int GetSustainHalfPedalUpper_mV();
+void SetSustainHalfPedalRange_mV(int lower_mV, int upper_mV);
+float GetHalfPedalVoltage();
+void SetHalfPedalVoltage(float voltage);
 
 void setup()
 {
@@ -123,6 +136,7 @@ void setup()
   // 读取配置
   ReadCalibration();
   ReadBluetoothActive();
+  ReadHalfPedalRange();
 
   // 配置按钮引脚（启用内部上拉）
   pinMode(Sustain_BUTTON_PIN, INPUT_PULLUP);
@@ -297,8 +311,20 @@ void loop()
   int sostenutoValue = AdcRemap(ADC_Sostenuto_PIN, Sostenuto_Pedal_MIN, Sostenuto_Pedal_MAX);
   int softValue = AdcRemap(ADC_Soft_PIN, Soft_Pedal_MIN, Soft_Pedal_MAX);
 
-  // 输出延音信号
-  dacWrite(DAC_Sustain_PIN, (uint8_t)(sustainValue * Max_DAC_Voltage / 3.3));
+  // 输出延音信号（带半踏功能）
+  // 当延音踏板踩下深度在半踏范围内时，直接输出半踏电压
+  // 获取当前延音踏板的mV值
+  int sustainMv = esp_adc_cal_raw_to_voltage(analogRead(ADC_Sustain_PIN), &adc_chars);
+  if (sustainMv >= Sustain_HalfPedal_Lower_mV && sustainMv <= Sustain_HalfPedal_Upper_mV)
+  {
+    // 半踏范围内，输出固定半踏电压
+    dacWrite(DAC_Sustain_PIN, (uint8_t)(HalfPedal_Voltage / 3.3 * 255));
+  }
+  else
+  {
+    // 正常输出
+    dacWrite(DAC_Sustain_PIN, (uint8_t)(sustainValue * Max_DAC_Voltage / 3.3));
+  }
 
   // 输出持音信号
   // 如果连接蓝牙翻页，就不再输出持音踏板信号
@@ -398,6 +424,72 @@ void ReadBluetoothActive()
   prefs.begin("config", false);
   Bluetooth_Active = prefs.getBool("blactive", false);
   prefs.end();
+}
+
+// 保存半踏范围设定
+void SaveHalfPedalRange()
+{
+  prefs.begin("config", false);
+  prefs.putInt("halfLower_mV", Sustain_HalfPedal_Lower_mV);
+  prefs.putInt("halfUpper_mV", Sustain_HalfPedal_Upper_mV);
+  prefs.putFloat("halfVoltage", HalfPedal_Voltage);
+  prefs.end();
+  DBG_PRINTF("[保存半踏设置] Lower=%dmV Upper=%dmV Voltage=%.2fV\n", Sustain_HalfPedal_Lower_mV, Sustain_HalfPedal_Upper_mV, HalfPedal_Voltage);
+}
+
+// 读取半踏范围设定
+void ReadHalfPedalRange()
+{
+  prefs.begin("config", false);
+  Sustain_HalfPedal_Lower_mV = prefs.getInt("halfLower_mV", 1500);
+  Sustain_HalfPedal_Upper_mV = prefs.getInt("halfUpper_mV", 2500);
+  HalfPedal_Voltage = prefs.getFloat("halfVoltage", 1.7f);
+  prefs.end();
+  DBG_PRINTF("[读取半踏设置] Lower=%dmV Upper=%dmV Voltage=%.2fV\n", Sustain_HalfPedal_Lower_mV, Sustain_HalfPedal_Upper_mV, HalfPedal_Voltage);
+}
+
+// 获取半踏范围下限（mV）
+int GetSustainHalfPedalLower_mV()
+{
+  return Sustain_HalfPedal_Lower_mV;
+}
+
+// 获取半踏范围上限（mV）
+int GetSustainHalfPedalUpper_mV()
+{
+  return Sustain_HalfPedal_Upper_mV;
+}
+
+// 设置半踏范围（mV）
+void SetSustainHalfPedalRange_mV(int lower_mV, int upper_mV)
+{
+  // 限制范围在合理范围内
+  if (lower_mV < 0) lower_mV = 0;
+  if (lower_mV > 3300) lower_mV = 3300;
+  if (upper_mV < 0) upper_mV = 0;
+  if (upper_mV > 3300) upper_mV = 3300;
+  // 确保下限不大于上限
+  if (lower_mV > upper_mV) lower_mV = upper_mV;
+  
+  Sustain_HalfPedal_Lower_mV = lower_mV;
+  Sustain_HalfPedal_Upper_mV = upper_mV;
+  SaveHalfPedalRange();
+}
+
+// 获取半踏电压
+float GetHalfPedalVoltage()
+{
+  return HalfPedal_Voltage;
+}
+
+// 设置半踏电压
+void SetHalfPedalVoltage(float voltage)
+{
+  // 限制电压范围 0 - 3.3V
+  if (voltage < 0.0f) voltage = 0.0f;
+  if (voltage > 3.3f) voltage = 3.3f;
+  HalfPedal_Voltage = voltage;
+  SaveHalfPedalRange();
 }
 
 // 统一的蓝牙关闭函数
