@@ -1,0 +1,88 @@
+@startuml
+!theme blueprint
+skinparam dpi 280
+skinparam backgroundColor transparent
+skinparam defaultFontName Microsoft YaHei UI
+skinparam componentStyle uml2
+skinparam ArrowColor black
+skinparam ComponentBorderColor black
+skinparam ComponentBackgroundColor white
+skinparam PackageBorderColor black
+skinparam PackageBackgroundColor white
+
+title ESP32 钢琴踏板控制器系统架构
+
+package "踏板输入" {
+    [延音踏板\n(Sustain)] as sustain_pedal
+    [持音踏板\n(Sostenuto)] as sostenuto_pedal
+    [弱音踏板\n(Soft)] as soft_pedal
+}
+
+package "霍尔传感器" {
+    [ADC_CH7\nGPIO35] as adc_sustain
+    [ADC_CH4\nGPIO32] as adc_sostenuto
+    [ADC_CH5\nGPIO33] as adc_soft
+}
+
+package "ADC采样与处理" {
+    component "三次采样平均降噪" as avg
+    component "电压校准\nesp_adc_cal" as cal
+    component "死区处理 5%" as deadzone
+    component "EMA平滑滤波" as ema
+    component "映射到0-255" as map
+}
+
+package "信号输出" {
+    [DAC GPIO25\n(半踏支持)] as dac_sustain
+    [DAC GPIO26] as dac_sostenuto
+    [GPIO17\n开关输出] as gpio_soft
+}
+
+package "外部设备" {
+    [钢琴/电子琴\n踏板接口] as piano
+    [MIDI控制器] as midi
+}
+
+package "BLE键盘模块" {
+    component "蓝牙名称: 翻页器" as ble
+    component "翻页逻辑:\n短踩下一页\n长踩上一页" as ble_logic
+}
+
+package "OTA更新模块" {
+    component "WiFi AP模式" as wifi_ap
+    component "Web界面\n固件上传" as web_ota
+    component "实时踏板状态" as pedal_status
+    component "半踏参数配置" as half_config
+}
+
+sustain_pedal --> adc_sustain
+sostenuto_pedal --> adc_sostenuto
+soft_pedal --> adc_soft
+
+adc_sustain --> avg
+adc_sostenuto --> avg
+adc_soft --> avg
+
+avg --> cal
+cal --> deadzone
+deadzone --> ema
+ema --> map
+
+map --> dac_sustain : 延音
+map --> dac_sostenuto : 持音
+map --> gpio_soft : 弱音
+
+dac_sustain --> piano
+dac_sostenuto --> piano
+gpio_soft --> piano
+
+map --> midi
+
+adc_sostenuto --> ble_logic : 翻页信号
+ble_logic --> ble
+
+wifi_ap --> web_ota
+web_ota --> pedal_status
+web_ota --> half_config
+
+@enduml

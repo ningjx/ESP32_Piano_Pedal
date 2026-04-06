@@ -1,0 +1,50 @@
+@startuml
+!theme blueprint
+skinparam dpi 280
+skinparam backgroundColor transparent
+skinparam defaultFontName Microsoft YaHei UI
+skinparam componentStyle uml2
+skinparam ArrowColor black
+skinparam ComponentBorderColor black
+skinparam ComponentBackgroundColor white
+skinparam PackageBorderColor black
+skinparam PackageBackgroundColor white
+
+title OTA 更新系统架构
+
+package "WiFi AP 模式" {
+    component "SSID: 钢琴踏板固件更新" as ssid
+    component "IP: 192.168.4.1" as ip
+    component "无密码开放热点" as open_ap
+    component "最大连接数: 1" as max_conn
+}
+
+package "DNS 服务器" {
+    component "劫持所有DNS请求" as dns_hijack
+    component "→ 192.168.4.1" as dns_redirect
+    component "Captive Portal\n自动弹出网页" as captive
+}
+
+package "Web 服务器 (端口80)" {
+    component "/ → 主页\n(固件上传界面)" as route_root
+    component "/status → 踏板状态JSON" as route_status
+    component "/setHalfPedal → 半踏参数设置" as route_half
+    component "/update → 固件上传处理" as route_update
+    component "其他 → 重定向到主页" as route_other
+}
+
+ssid --> ip
+ip --> open_ap
+open_ap --> max_conn
+
+max_conn --> dns_hijack
+dns_hijack --> dns_redirect
+dns_redirect --> captive
+
+captive --> route_root
+route_root --> route_status
+route_root --> route_half
+route_root --> route_update
+route_other --> route_root
+
+@enduml
