@@ -97,8 +97,7 @@ jobs:
 
       - name: Build firmware
         if: steps.determine_action.outputs.should_build == 'true'
-        working-directory: arduino_src
-        run: pio run -e esp32dev
+        run: pio run --project-dir arduino_src -e esp32dev
 
       - name: Prepare firmware artifact
         if: steps.determine_action.outputs.should_build == 'true'
