@@ -3,9 +3,8 @@ name: Generate PlantUML Diagrams
 on:
   push:
     paths:
-      - '**.md'
-      - '**.puml'
-      - '**.pu'
+      - 'Documents/puml/**.puml'
+      - 'Documents/puml/**.pu'
       - '.github/workflows/plantuml.yml'
 
 permissions:
