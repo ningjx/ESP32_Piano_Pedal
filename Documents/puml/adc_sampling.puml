@@ -9,7 +9,8 @@ skinparam arrowFontColor black
 skinparam activityDiamondBorderColor black
 skinparam activityDiamondFontColor white
 skinparam activityBarColor black
-skinparam handwritten false
+skinparam handwritten true
+!option handwritten true
 'title ADC 采样流程
 
 start
