@@ -12,7 +12,7 @@ on:
       force_release:
         description: 'Force create tag and release based on FW_VERSION'
         required: false
-        default: 'true'
+        default: true
         type: boolean
 
 jobs:

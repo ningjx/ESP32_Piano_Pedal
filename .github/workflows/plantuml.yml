@@ -1,0 +1,28 @@
+name: Generate PlantUML Diagrams
+
+on:
+  push:
+    paths:
+      - '**.md'
+      - '**.puml'
+      - '**.pu'
+      - '.github/workflows/plantuml.yml'
+
+jobs:
+  generate_plantuml:
+    runs-on: ubuntu-latest
+    name: plantuml
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      
+      - name: plantuml
+        id: plantuml
+        uses: grassedge/generate-plantuml-action@v1.5
+        with:
+          path: Documents/puml
+          message: "docs: 自动生成 PlantUML 图表"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
