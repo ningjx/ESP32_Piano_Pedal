@@ -242,11 +242,10 @@ const char index_html[] PROGMEM = R"rawliteral(
     .half-marker.upper:hover{background:#1976d2}
     .half-zone{position:absolute;left:0;width:100%;background:rgba(255,152,0,0.15);pointer-events:none}
     .half-label{font-size:11px;color:#ff9800;margin-top:4px}
-    /* 延音踏板容器（为半踏数字留出空间） */
+    /* 延音踏板容器 */
     .sustain-container{position:relative}
-    .sustain-container .vprogress{margin-left:45px}
-    /* 半踏数字显示（放在容器中，避免被overflow:hidden裁剪） */
-    .half-marker-val{position:absolute;left:3px;width:38px;text-align:right;font-size:10px;color:#ff9800;font-weight:600;pointer-events:none;z-index:5}
+    /* 半踏数字显示（使用50%定位+transform，确保在进度条左侧） */
+    .half-marker-val{position:absolute;left:50%;transform:translateX(-72px);width:38px;text-align:right;font-size:10px;color:#ff9800;font-weight:600;pointer-events:none;z-index:5}
     .half-marker-val.upper{color:#2196f3}
     /* 设置区域样式 */
     .settings-section{margin-top:20px;padding-top:16px;border-top:1px solid #eee}
@@ -494,17 +493,19 @@ const char index_html[] PROGMEM = R"rawliteral(
       halfUpperEl.style.bottom = Math.max(0, Math.min(100, upperPct)) + '%';
       
       // 更新数字显示位置（放在容器中，使用bottom定位与滑条对齐）
-      // 进度条高度140px，margin-top 8px
+      // 进度条高度140px，margin: 8px auto（上下各8px）
       // 数字中心需要与指示条中心对齐
       const vprogressHeight = 140;
-      const vprogressMarginTop = 8;
+      const vprogressMarginBottom = 8;  // 进度条底部到容器底部的距离
       const markerHeight = 4;  // 指示条高度
       const valHeight = 12;    // 数字高度约12px（font-size:10px + line-height）
       
       // 计算指示条中心位置（相对于容器底部）
-      // 指示条bottom是百分比，中心位置 = bottom + markerHeight/2
-      const lowerMarkerCenter = vprogressMarginTop + vprogressHeight * (lowerPct / 100) + markerHeight / 2;
-      const upperMarkerCenter = vprogressMarginTop + vprogressHeight * (upperPct / 100) + markerHeight / 2;
+      // 指示条bottom是相对于进度条，所以需要加上margin-bottom来转换到容器坐标系
+      const lowerMarkerBottom = vprogressMarginBottom + vprogressHeight * (lowerPct / 100);
+      const upperMarkerBottom = vprogressMarginBottom + vprogressHeight * (upperPct / 100);
+      const lowerMarkerCenter = lowerMarkerBottom + markerHeight / 2;
+      const upperMarkerCenter = upperMarkerBottom + markerHeight / 2;
       
       // 数字底部位置 = 指示条中心 - 数字高度/2（让数字中心与指示条中心对齐）
       const lowerBottom = lowerMarkerCenter - valHeight / 2;
