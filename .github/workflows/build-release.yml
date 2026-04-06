@@ -15,9 +15,6 @@ on:
         default: 'true'
         type: boolean
 
-env:
-  PLATFORMIO_SRC_DIR: arduino_src
-
 jobs:
   check-and-release:
     runs-on: ubuntu-latest
