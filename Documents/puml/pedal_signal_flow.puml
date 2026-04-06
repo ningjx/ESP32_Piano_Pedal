@@ -7,7 +7,7 @@ skinparam activityBorderColor black
 skinparam arrowColor black
 skinparam arrowFontColor black
 skinparam activityDiamondBorderColor black
-skinparam activityDiamondFontColor black
+skinparam activityDiamondFontColor white
 skinparam activityBarColor black
 skinparam handwritten false
 'title 踏板信号数据流
