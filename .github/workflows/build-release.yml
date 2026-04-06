@@ -34,7 +34,10 @@ jobs:
         id: extract_version
         run: |
           # 从 platformio.ini 提取 FW_VERSION
-          VERSION=$(grep -oP '(?<=-DFW_VERSION=\\")[^"]+' arduino_src/platformio.ini)
+          # platformio.ini 格式: -DFW_VERSION=\"1.2.0\"
+          VERSION=$(grep "FW_VERSION" arduino_src/platformio.ini | sed 's/.*FW_VERSION=\\?"\([^"]*\)\\?".*/\1/')
+          # 去除可能残留的反斜杠
+          VERSION=$(echo "$VERSION" | tr -d '\\')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Extracted version: $VERSION"
 
