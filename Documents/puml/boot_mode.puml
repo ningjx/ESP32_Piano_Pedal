@@ -1,0 +1,42 @@
+@startuml
+!theme blueprint
+skinparam dpi 280
+skinparam backgroundColor transparent
+skinparam defaultFontName Microsoft YaHei UI
+skinparam activityBorderColor black
+skinparam arrowColor black
+skinparam arrowFontColor black
+skinparam activityDiamondBorderColor black
+skinparam activityDiamondFontColor black
+skinparam activityBarColor black
+skinparam handwritten false
+'title 开机模式判断流程
+
+start
+:系统启动;
+:读取持久化配置\n• 校准参数\n• 蓝牙开关状态\n• 半踏参数;
+:检测持音踏板霍尔\nADC 值 > 1500mV?;
+if (ADC > 1500mV?) then (是-踩下)
+  :校准模式;
+  :蜂鸣提示 (Do Sol);
+  stop
+else (否-松开)
+  :检测弱音踏板\nmapped > 127?;
+  if (mapped > 127?) then (是-踩下)
+    :OTA 模式;
+    :蜂鸣提示 (Do-Sol-Si);
+    stop
+  else (否-松开)
+    :检测延音踏板\nmapped > 127?;
+    if (mapped > 127?) then (是-踩下)
+      :切换蓝牙开关状态;
+      :蜂鸣提示 (Mi Sol Si);
+      stop
+    else (否)
+      :正常模式\n踏板输出;
+      stop
+    endif
+  endif
+endif
+
+@enduml

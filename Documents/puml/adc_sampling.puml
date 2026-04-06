@@ -1,0 +1,26 @@
+@startuml
+!theme blueprint
+skinparam dpi 280
+skinparam backgroundColor transparent
+skinparam defaultFontName Microsoft YaHei UI
+skinparam activityBorderColor black
+skinparam arrowColor black
+skinparam arrowFontColor black
+skinparam activityDiamondBorderColor black
+skinparam activityDiamondFontColor black
+skinparam activityBarColor black
+skinparam handwritten false
+'title ADC 采样流程
+
+start
+:原始 ADC 值 (0-4095);
+:三次采样平均\nraw0 + raw1 + raw2 / 3\n降低瞬时噪声;
+:电压校准转换\nesp_adc_cal_raw_to_voltage()\nADC → mV (0-3300);
+:死区处理 5%\nminV + 5% range\nmaxV - 5% range\n消除抖动;
+:范围映射\n校准范围 → 0-255\npct = (vol - min) / (max - min)\nvalue = 255 * pct;
+:EMA 平滑滤波\n自适应指数移动平均\nα = 0.7 (大变化) 快速跟随\nα = 0.2 (小抖动) 平滑处理;
+:步进限幅\n单次最大变化 12\nmaxStep = 12\n防止过快跳变;
+:输出值 (0-255);
+stop
+
+@enduml

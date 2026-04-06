@@ -1,0 +1,13 @@
+@startuml
+title 半踏兼容模式逻辑
+start
+:读取延音踏板 mV 值;
+if (mV < 半踏下限) then (是)
+  :输出 0V;
+elseif (mV > 半踏上限) then (是)
+  :输出最大电压;
+else (否)
+  :输出半踏电压;
+endif
+stop
+@enduml

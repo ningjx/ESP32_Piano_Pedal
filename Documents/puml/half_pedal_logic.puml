@@ -1,0 +1,38 @@
+@startuml
+!theme blueprint
+skinparam dpi 280
+skinparam backgroundColor transparent
+skinparam defaultFontName Microsoft YaHei UI
+skinparam activityBorderColor black
+skinparam arrowColor black
+skinparam arrowFontColor black
+skinparam activityDiamondBorderColor black
+skinparam activityDiamondFontColor black
+skinparam activityBarColor black
+skinparam handwritten false
+'title 半踏兼容模式逻辑
+
+start
+:读取延音踏板 mV 值;
+if (mV < 半踏下限?) then (是)
+  :输出 0V\n(不踩);
+elseif (mV > 半踏上限?) then (是)
+  :输出最大电压\n(踩到底);
+else (否)
+  :输出半踏电压;
+endif
+stop
+
+note right
+  三档输出:
+  • 不踩 ~ 半踏下限: 输出 0V
+  • 半踏范围内: 输出半踏电压
+  • 半踏上限 ~ 踩到底: 输出最大电压
+  
+  默认配置:
+  • 半踏范围: 1500 - 2500 mV
+  • 半踏电压: 1.7V
+  • 最大输出电压: 1.9V
+end note
+
+@enduml

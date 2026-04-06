@@ -1,0 +1,47 @@
+@startuml
+!theme blueprint
+skinparam dpi 280
+skinparam backgroundColor transparent
+skinparam defaultFontName Microsoft YaHei UI
+skinparam activityBorderColor black
+skinparam arrowColor black
+skinparam arrowFontColor black
+skinparam activityDiamondBorderColor black
+skinparam activityDiamondFontColor black
+skinparam activityBarColor black
+skinparam handwritten false
+'title 校准模式流程
+
+start
+:1. 进入校准模式;
+note right
+  • 蜂鸣提示: Do (C4) → Sol (G4)
+  • 初始化 MIN = 5000mV, MAX = 0mV
+  • 启动 20 秒超时计时
+end note
+
+:2. 校准采样循环;
+note right
+  • 每周期采样三个踏板 ADC
+  • 更新各踏板 MIN/MAX 范围
+  • 检查超时 (20秒)
+  • 检查长按完成 (2秒)
+end note
+
+switch (判断结束条件)
+case (超时 20秒)
+  :取消校准;
+  :恢复旧参数;
+  :蜂鸣: Sol→Do;
+case (长按 2秒完成)
+  :完成校准;
+  :保存新参数;
+  :蜂鸣: Do长音;
+case (继续采样)
+  :继续采样循环;
+endswitch
+
+:3秒后自动重启;
+stop
+
+@enduml

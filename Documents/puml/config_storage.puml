@@ -1,0 +1,45 @@
+@startuml
+!theme blueprint
+skinparam dpi 280
+skinparam backgroundColor transparent
+skinparam defaultFontName Microsoft YaHei UI
+skinparam activityBorderColor black
+skinparam arrowColor black
+skinparam arrowFontColor black
+skinparam activityDiamondBorderColor black
+skinparam activityDiamondFontColor black
+skinparam activityBarColor black
+skinparam handwritten false
+'title 配置存储流程
+
+partition "写入配置" {
+  start
+  :prefs.begin("config", false);\n打开命名空间;
+  :prefs.putInt("sustainmin", value);\n写入参数;
+  :prefs.end();\n关闭并保存;
+  stop
+}
+
+partition "读取配置" {
+  start
+  :prefs.begin("config", false);\n打开命名空间;
+  :int value = prefs.getInt("sustainmin", 5000);\n读取参数(带默认值);
+  :prefs.end();\n关闭;
+  stop
+}
+
+note right
+  存储位置: NVS 分区 (0x9000 - 0xDFFF, 20KB)
+  
+  存储键名:
+  • sustainmin/sustainmax - 延音踏板范围
+  • sostenutomin/sostenutomax - 持音踏板范围
+  • softmin/softmax - 弱音踏板范围
+  • blactive - 蓝牙开关状态
+  • halfLower_mV/halfUpper_mV - 半踏范围
+  • halfVoltage - 半踏电压
+  • halfEnabled - 半踏模式开关
+  • maxDACVoltage - 最大DAC电压
+end note
+
+@enduml

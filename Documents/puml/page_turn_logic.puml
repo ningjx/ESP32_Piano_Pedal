@@ -1,0 +1,39 @@
+@startuml
+!theme blueprint
+skinparam dpi 280
+skinparam backgroundColor transparent
+skinparam defaultFontName Microsoft YaHei UI
+skinparam activityBorderColor black
+skinparam arrowColor black
+skinparam arrowFontColor black
+skinparam activityDiamondBorderColor black
+skinparam activityDiamondFontColor black
+skinparam activityBarColor black
+skinparam handwritten false
+'title 翻页逻辑流程
+
+start
+:检测持音踏板状态;
+if (sostenutoValue > 100?) then (是)
+  :踏板踩下;
+  :开始计时\ndownStartMs;
+else (否)
+  if (sostenutoValue < 90?) then (是)
+    :踏板松开;
+    :计算踩下持续时间;
+    if (持续时间 < 500ms?) then (是)
+      :短踩\n下一页 PAGE_DOWN;
+    elseif (持续时间 >= 500ms?) then (是)
+      :长踩\n上一页 PAGE_UP;
+    endif
+  endif
+endif
+stop
+
+note right
+  长按判定时间: 500ms (LongPressTimeMs)
+  
+  蓝牙连接时，持音踏板的 DAC 输出将被禁用
+end note
+
+@enduml
