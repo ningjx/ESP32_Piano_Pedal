@@ -8,6 +8,9 @@ on:
       - '**.pu'
       - '.github/workflows/plantuml.yml'
 
+permissions:
+  contents: write
+
 jobs:
   generate_plantuml:
     runs-on: ubuntu-latest
