@@ -324,40 +324,29 @@ void loop()
   int softValue = AdcRemap(ADC_Soft_PIN, Soft_Pedal_MIN, Soft_Pedal_MAX);
 
   // 输出延音信号（带半踏功能）
-  // 当半踏功能开启时，分段线性映射输出，避免断崖式波动
+  // 当半踏功能开启时，三档输出：0V、半踏电压、最大输出电压
   // 获取当前延音踏板的mV值
   int sustainMv = esp_adc_cal_raw_to_voltage(analogRead(ADC_Sustain_PIN), &adc_chars);
   int sustainOutMv = 0; // 延音踏板输出电压（mV）
   
   if (HalfPedal_Enabled)
   {
-    // 半踏功能开启，分段线性映射
+    // 半踏功能开启，三档输出
     if (sustainMv < Sustain_HalfPedal_Lower_mV)
     {
-      // 踏板不踩 ~ 半踏下限：映射到 0V ~ 半踏电压
-      // 使用 Sustain_Pedal_MIN 作为基准，确保踏板未踩时输出为0V
-      float range = (float)(Sustain_HalfPedal_Lower_mV - Sustain_Pedal_MIN);
-      float above = (float)(sustainMv - Sustain_Pedal_MIN);
-      float ratio = (range > 0) ? (above / range) : 0.0f;
-      ratio = constrain(ratio, 0.0f, 1.0f);
-      float outVoltage = ratio * HalfPedal_Voltage;
-      dacWrite(DAC_Sustain_PIN, (uint8_t)(outVoltage / 3.3 * 255));
-      sustainOutMv = (int)(outVoltage * 1000);
+      // 不踩 ~ 半踏下限：输出 0V
+      dacWrite(DAC_Sustain_PIN, 0);
+      sustainOutMv = 0;
     }
     else if (sustainMv > Sustain_HalfPedal_Upper_mV)
     {
-      // 半踏上限 ~ 踩下最大深度：映射到 半踏电压 ~ 最大输出电压
-      float range = (float)(Sustain_Pedal_MAX - Sustain_HalfPedal_Upper_mV);
-      float above = (float)(sustainMv - Sustain_HalfPedal_Upper_mV);
-      float ratio = (range > 0) ? (above / range) : 1.0f;
-      ratio = constrain(ratio, 0.0f, 1.0f);
-      float outVoltage = HalfPedal_Voltage + ratio * (Max_DAC_Voltage - HalfPedal_Voltage);
-      dacWrite(DAC_Sustain_PIN, (uint8_t)(outVoltage / 3.3 * 255));
-      sustainOutMv = (int)(outVoltage * 1000);
+      // 半踏上限 ~ 踩下最大深度：输出最大输出电压
+      dacWrite(DAC_Sustain_PIN, (uint8_t)(Max_DAC_Voltage / 3.3 * 255));
+      sustainOutMv = (int)(Max_DAC_Voltage * 1000);
     }
     else
     {
-      // 在半踏范围内：输出固定半踏电压
+      // 在半踏范围内：输出半踏电压
       dacWrite(DAC_Sustain_PIN, (uint8_t)(HalfPedal_Voltage / 3.3 * 255));
       sustainOutMv = (int)(HalfPedal_Voltage * 1000);
     }

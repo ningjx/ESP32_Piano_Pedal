@@ -238,15 +238,16 @@ const char index_html[] PROGMEM = R"rawliteral(
     /* 半踏范围滑动标志样式 */
     .half-marker{position:absolute;left:0;width:60px;height:4px;background:#ff9800;cursor:ns-resize;z-index:10;opacity:0.8;border-radius:2px}
     .half-marker:hover{opacity:1;background:#f57c00}
-    .half-marker-val{position:absolute;left:-42px;width:38px;text-align:right;font-size:10px;color:#ff9800;font-weight:600;pointer-events:none;top:-2px}
     .half-marker.upper{background:#2196f3}
     .half-marker.upper:hover{background:#1976d2}
-    .half-marker.upper .half-marker-val{color:#2196f3}
     .half-zone{position:absolute;left:0;width:100%;background:rgba(255,152,0,0.15);pointer-events:none}
     .half-label{font-size:11px;color:#ff9800;margin-top:4px}
     /* 延音踏板容器（为半踏数字留出空间） */
     .sustain-container{position:relative}
     .sustain-container .vprogress{margin-left:45px}
+    /* 半踏数字显示（放在容器中，避免被overflow:hidden裁剪） */
+    .half-marker-val{position:absolute;left:3px;width:38px;text-align:right;font-size:10px;color:#ff9800;font-weight:600;pointer-events:none;z-index:5}
+    .half-marker-val.upper{color:#2196f3}
     /* 设置区域样式 */
     .settings-section{margin-top:20px;padding-top:16px;border-top:1px solid #eee}
     .settings-row{display:flex;align-items:center;gap:12px;margin:8px 0}
@@ -301,14 +302,17 @@ const char index_html[] PROGMEM = R"rawliteral(
         <div style="flex:1;text-align:center">
           <div class="pedal-label" id="v2_label">延音踏板</div>
           <div class="sustain-container">
+            <!-- 半踏数字显示（放在容器中，避免被overflow:hidden裁剪） -->
+            <div class="half-marker-val" id="halfLowerVal">1500</div>
+            <div class="half-marker-val upper" id="halfUpperVal">2500</div>
             <div class="vprogress" id="v2">
               <div class="vmax">0</div>
               <i></i>
               <div class="vmin">0</div>
               <!-- 半踏范围滑动标志 -->
               <div class="half-zone" id="halfZone"></div>
-              <div class="half-marker lower" id="halfLower"><span class="half-marker-val" id="halfLowerVal">1500</span></div>
-              <div class="half-marker upper" id="halfUpper"><span class="half-marker-val" id="halfUpperVal">2500</span></div>
+              <div class="half-marker lower" id="halfLower"></div>
+              <div class="half-marker upper" id="halfUpper"></div>
             </div>
           </div>
           <div class="small" id="v2_txt">输出: 0 mV</div>
@@ -358,7 +362,7 @@ const char index_html[] PROGMEM = R"rawliteral(
         </select>
       </div>
       <div class="settings-row">
-        <span class="settings-label">半踏功能:</span>
+        <span class="settings-label">半踏兼容模式:</span>
         <label class="toggle-switch">
           <input type="checkbox" id="halfPedalEnabled">
           <span class="toggle-slider"></span>
@@ -488,7 +492,25 @@ const char index_html[] PROGMEM = R"rawliteral(
       // lower标志在下方，upper标志在上方
       halfLowerEl.style.bottom = Math.max(0, Math.min(100, lowerPct)) + '%';
       halfUpperEl.style.bottom = Math.max(0, Math.min(100, upperPct)) + '%';
-      // 更新数字显示（与滑条水平对齐）
+      
+      // 更新数字显示位置（放在容器中，使用bottom定位与滑条对齐）
+      // 进度条高度140px，margin-top 8px
+      // 数字中心需要与指示条中心对齐
+      const vprogressHeight = 140;
+      const vprogressMarginTop = 8;
+      const markerHeight = 4;  // 指示条高度
+      const valHeight = 12;    // 数字高度约12px（font-size:10px + line-height）
+      
+      // 计算指示条中心位置（相对于容器底部）
+      // 指示条bottom是百分比，中心位置 = bottom + markerHeight/2
+      const lowerMarkerCenter = vprogressMarginTop + vprogressHeight * (lowerPct / 100) + markerHeight / 2;
+      const upperMarkerCenter = vprogressMarginTop + vprogressHeight * (upperPct / 100) + markerHeight / 2;
+      
+      // 数字底部位置 = 指示条中心 - 数字高度/2（让数字中心与指示条中心对齐）
+      const lowerBottom = lowerMarkerCenter - valHeight / 2;
+      const upperBottom = upperMarkerCenter - valHeight / 2;
+      halfLowerValEl.style.bottom = lowerBottom + 'px';
+      halfUpperValEl.style.bottom = upperBottom + 'px';
       halfLowerValEl.textContent = halfLower;
       halfUpperValEl.textContent = halfUpper;
       
