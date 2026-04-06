@@ -13,7 +13,6 @@ skinparam packageFontColor black
 skinparam componentFontColor black
 skinparam componentArrowColor black
 skinparam componentStyle uml2
-!option handwritten false
 
 title ESP32 钢琴踏板控制器系统架构
 

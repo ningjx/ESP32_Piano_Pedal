@@ -9,7 +9,6 @@ skinparam arrowFontColor black
 skinparam activityDiamondBorderColor black
 skinparam activityDiamondFontColor white
 skinparam activityBarColor black
-!option handwritten false
 'title 翻页逻辑流程
 
 start

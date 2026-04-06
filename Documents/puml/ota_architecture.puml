@@ -13,7 +13,6 @@ skinparam packageFontColor black
 skinparam componentFontColor black
 skinparam componentArrowColor black
 skinparam componentStyle uml2
-!option handwritten false
 
 title OTA 更新系统架构
 
