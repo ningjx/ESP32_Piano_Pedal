@@ -56,7 +56,8 @@ Preferences prefs;
 // 主循环延时
 #define Main_Loop_DelayMs 5
 
-const float Max_DAC_Voltage = 1.9f; // DAC输出的最大电压
+const float Max_DAC_Voltage_Default = 1.9f; // DAC输出的默认最大电压
+float Max_DAC_Voltage = 1.9f;         // DAC输出的最大电压（可配置）
 
 // 蜂鸣器PWM配置
 #define BUZZER_PIN 16
@@ -77,6 +78,7 @@ int Soft_Pedal_MAX;
 int Sustain_HalfPedal_Lower_mV = 1500;  // 半踏范围下限（mV）
 int Sustain_HalfPedal_Upper_mV = 2500;  // 半踏范围上限（mV）
 float HalfPedal_Voltage = 1.7f;         // 半踏输出电压（可配置）
+bool HalfPedal_Enabled = false;         // 半踏功能开关（默认关闭）
 
 // 校准功能相关参数
 bool InCalibration = false;
@@ -116,6 +118,14 @@ int GetSustainHalfPedalUpper_mV();
 void SetSustainHalfPedalRange_mV(int lower_mV, int upper_mV);
 float GetHalfPedalVoltage();
 void SetHalfPedalVoltage(float voltage);
+void SaveHalfPedalEnabled();
+void ReadHalfPedalEnabled();
+bool GetHalfPedalEnabled();
+void SetHalfPedalEnabled(bool enabled);
+void SaveMaxDACVoltage();
+void ReadMaxDACVoltage();
+float GetMaxDACVoltage();
+void SetMaxDACVoltage(float voltage);
 
 void setup()
 {
@@ -137,6 +147,8 @@ void setup()
   ReadCalibration();
   ReadBluetoothActive();
   ReadHalfPedalRange();
+  ReadHalfPedalEnabled();
+  ReadMaxDACVoltage();
 
   // 配置按钮引脚（启用内部上拉）
   pinMode(Sustain_BUTTON_PIN, INPUT_PULLUP);
@@ -312,28 +324,45 @@ void loop()
   int softValue = AdcRemap(ADC_Soft_PIN, Soft_Pedal_MIN, Soft_Pedal_MAX);
 
   // 输出延音信号（带半踏功能）
-  // 当延音踏板踩下深度在半踏范围内时，直接输出半踏电压
+  // 当半踏功能开启且延音踏板踩下深度在半踏范围内时，输出固定半踏电压
+  // 否则根据踩下深度线性输出
   // 获取当前延音踏板的mV值
   int sustainMv = esp_adc_cal_raw_to_voltage(analogRead(ADC_Sustain_PIN), &adc_chars);
-  if (sustainMv >= Sustain_HalfPedal_Lower_mV && sustainMv <= Sustain_HalfPedal_Upper_mV)
+  int sustainOutMv = 0; // 延音踏板输出电压（mV）
+  if (HalfPedal_Enabled && sustainMv >= Sustain_HalfPedal_Lower_mV && sustainMv <= Sustain_HalfPedal_Upper_mV)
   {
-    // 半踏范围内，输出固定半踏电压
+    // 半踏功能开启且在半踏范围内，输出固定半踏电压
     dacWrite(DAC_Sustain_PIN, (uint8_t)(HalfPedal_Voltage / 3.3 * 255));
+    sustainOutMv = (int)(HalfPedal_Voltage * 1000); // 转换为mV
   }
   else
   {
-    // 正常输出
+    // 正常线性输出
     dacWrite(DAC_Sustain_PIN, (uint8_t)(sustainValue * Max_DAC_Voltage / 3.3));
+    sustainOutMv = (int)(sustainValue * Max_DAC_Voltage / 255 * 1000); // 转换为mV
   }
 
   // 输出持音信号
   // 如果连接蓝牙翻页，就不再输出持音踏板信号
+  int sostenutoOutMv = 0; // 持音踏板输出电压（mV）
   if (!bleKeyboard.isConnected())
+  {
     dacWrite(DAC_Sostenuto_PIN, (uint8_t)(sostenutoValue * Max_DAC_Voltage / 3.3));
+    sostenutoOutMv = (int)(sostenutoValue * Max_DAC_Voltage / 255 * 1000); // 转换为mV
+  }
 
   // 输出弱音开关信号
   // 控制 Switch_Soft: 若 Soft_BUTTON 按下则高电平，否则低
+  int softOutMv = (softValue > 127) ? 3300 : 0; // 弱音踏板输出（GPIO，0或3300mV）
   digitalWrite(Switch_Soft_PIN, softValue > 127 ? HIGH : LOW);
+
+  // 更新网页上的踏板输出电压显示
+  if (otaPortalActive())
+  {
+    otaPortalSetPedalStatus(0, softOutMv, Soft_Pedal_MIN, Soft_Pedal_MAX, softValue);      // 弱音：GPIO输出
+    otaPortalSetPedalStatus(1, sostenutoOutMv, Sostenuto_Pedal_MIN, Sostenuto_Pedal_MAX, sostenutoValue); // 持音：DAC输出
+    otaPortalSetPedalStatus(2, sustainOutMv, Sustain_Pedal_MIN, Sustain_Pedal_MAX, sustainValue);         // 延音：DAC输出
+  }
 
   // 翻页功能
   if (bleKeyboard.isConnected())
@@ -490,6 +519,71 @@ void SetHalfPedalVoltage(float voltage)
   if (voltage > 3.3f) voltage = 3.3f;
   HalfPedal_Voltage = voltage;
   SaveHalfPedalRange();
+}
+
+// 保存半踏功能开关状态
+void SaveHalfPedalEnabled()
+{
+  prefs.begin("config", false);
+  prefs.putBool("halfEnabled", HalfPedal_Enabled);
+  prefs.end();
+  DBG_PRINTF("[保存半踏开关] Enabled=%s\n", HalfPedal_Enabled ? "true" : "false");
+}
+
+// 读取半踏功能开关状态
+void ReadHalfPedalEnabled()
+{
+  prefs.begin("config", false);
+  HalfPedal_Enabled = prefs.getBool("halfEnabled", false); // 默认关闭
+  prefs.end();
+  DBG_PRINTF("[读取半踏开关] Enabled=%s\n", HalfPedal_Enabled ? "true" : "false");
+}
+
+// 获取半踏功能开关状态
+bool GetHalfPedalEnabled()
+{
+  return HalfPedal_Enabled;
+}
+
+// 设置半踏功能开关状态
+void SetHalfPedalEnabled(bool enabled)
+{
+  HalfPedal_Enabled = enabled;
+  SaveHalfPedalEnabled();
+}
+
+// 保存最大DAC输出电压
+void SaveMaxDACVoltage()
+{
+  prefs.begin("config", false);
+  prefs.putFloat("maxDACVoltage", Max_DAC_Voltage);
+  prefs.end();
+  DBG_PRINTF("[保存最大DAC电压] Voltage=%.2fV\n", Max_DAC_Voltage);
+}
+
+// 读取最大DAC输出电压
+void ReadMaxDACVoltage()
+{
+  prefs.begin("config", false);
+  Max_DAC_Voltage = prefs.getFloat("maxDACVoltage", Max_DAC_Voltage_Default);
+  prefs.end();
+  DBG_PRINTF("[读取最大DAC电压] Voltage=%.2fV\n", Max_DAC_Voltage);
+}
+
+// 获取最大DAC输出电压
+float GetMaxDACVoltage()
+{
+  return Max_DAC_Voltage;
+}
+
+// 设置最大DAC输出电压
+void SetMaxDACVoltage(float voltage)
+{
+  // 限制电压范围 0.1 - 3.3V
+  if (voltage < 0.1f) voltage = 0.1f;
+  if (voltage > 3.3f) voltage = 3.3f;
+  Max_DAC_Voltage = voltage;
+  SaveMaxDACVoltage();
 }
 
 // 统一的蓝牙关闭函数

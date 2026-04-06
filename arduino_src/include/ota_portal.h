@@ -14,3 +14,9 @@ int otaPortalGetHalfPedalUpper_mV();
 void otaPortalSetHalfPedalRange_mV(int lower_mV, int upper_mV);
 float otaPortalGetHalfPedalVoltage();
 void otaPortalSetHalfPedalVoltage(float voltage);
+// 半踏功能开关API
+bool otaPortalGetHalfPedalEnabled();
+void otaPortalSetHalfPedalEnabled(bool enabled);
+// 最大DAC输出电压API
+float otaPortalGetMaxDACVoltage();
+void otaPortalSetMaxDACVoltage(float voltage);

@@ -44,6 +44,8 @@ static PedalStatus pedals[3] = {{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}};
 static int halfPedalLower_mV = 1500;
 static int halfPedalUpper_mV = 2500;
 static float halfPedalVoltage = 1.7f;
+static bool halfPedalEnabled = false; // 半踏功能开关（默认关闭）
+static float maxDACVoltage = 1.9f;    // 最大DAC输出电压
 
 // 外部可调用的函数：用于更新每个踏板的实时状态
 extern "C" void otaPortalSetPedalStatus(int index, int mv, int minv, int maxv, int mapped)
@@ -71,11 +73,13 @@ void handleStatus()
     if (i < 2)
       json += ",";
   }
-  // 添加半踏范围（mV值）和电压
+  // 添加半踏范围（mV值）、电压和开关状态
   json += ",\"halfPedal\":{";
   json += "\"lower\":" + String(halfPedalLower_mV) + ",";
   json += "\"upper\":" + String(halfPedalUpper_mV) + ",";
-  json += "\"voltage\":" + String(halfPedalVoltage, 2);
+  json += "\"voltage\":" + String(halfPedalVoltage, 2) + ",";
+  json += "\"enabled\":" + String(halfPedalEnabled ? "true" : "false") + ",";
+  json += "\"maxDACVoltage\":" + String(maxDACVoltage, 1);
   json += "}}";
   server.send(200, "application/json", json);
 }
@@ -143,6 +147,64 @@ void otaPortalSetHalfPedalVoltage(float voltage)
   SetHalfPedalVoltage(voltage);
 }
 
+// 设置半踏功能开关的处理器
+void handleSetHalfPedalEnabled()
+{
+  if (server.hasArg("enabled"))
+  {
+    bool enabled = server.arg("enabled") == "1" || server.arg("enabled") == "true";
+    otaPortalSetHalfPedalEnabled(enabled);
+    halfPedalEnabled = enabled;
+    server.send(200, "application/json", "{\"success\":true}");
+  }
+  else
+  {
+    server.send(400, "application/json", "{\"success\":false,\"error\":\"missing enabled parameter\"}");
+  }
+}
+
+// 半踏功能开关API实现 - 调用main.cpp中的函数
+bool otaPortalGetHalfPedalEnabled()
+{
+  extern bool GetHalfPedalEnabled();
+  return GetHalfPedalEnabled();
+}
+
+void otaPortalSetHalfPedalEnabled(bool enabled)
+{
+  extern void SetHalfPedalEnabled(bool enabled);
+  SetHalfPedalEnabled(enabled);
+}
+
+// 设置最大DAC输出电压的处理器
+void handleSetMaxDACVoltage()
+{
+  if (server.hasArg("voltage"))
+  {
+    float voltage = server.arg("voltage").toFloat();
+    otaPortalSetMaxDACVoltage(voltage);
+    maxDACVoltage = voltage;
+    server.send(200, "application/json", "{\"success\":true}");
+  }
+  else
+  {
+    server.send(400, "application/json", "{\"success\":false,\"error\":\"missing voltage parameter\"}");
+  }
+}
+
+// 最大DAC输出电压API实现
+float otaPortalGetMaxDACVoltage()
+{
+  extern float GetMaxDACVoltage();
+  return GetMaxDACVoltage();
+}
+
+void otaPortalSetMaxDACVoltage(float voltage)
+{
+  extern void SetMaxDACVoltage(float voltage);
+  SetMaxDACVoltage(voltage);
+}
+
 const char index_html[] PROGMEM = R"rawliteral(
 <!doctype html>
 <html lang="zh-CN">
@@ -163,7 +225,7 @@ const char index_html[] PROGMEM = R"rawliteral(
     .progress > i{display:block;height:100%;width:0;background:linear-gradient(90deg,#4caf50,#8bc34a);transition:width 150ms}
     .status{margin-top:8px;font-size:13px}
     .small{font-size:12px;color:#888}
-    .vprogress{width:60px;height:140px;background:#eee;border-radius:8px;position:relative;margin:8px auto;overflow:visible}
+    .vprogress{width:60px;height:140px;background:#eee;border-radius:8px;position:relative;margin:8px auto;overflow:hidden}
     .vprogress>i{position:absolute;left:0;bottom:0;width:100%;height:0;background:linear-gradient(180deg,#4caf50,#8bc34a);transition:height 120ms;border-radius:0 0 8px 8px}
     .pedal-row{display:flex;gap:12px;justify-content:space-between}
     .pedal-label{font-weight:600;margin-bottom:6px}
@@ -174,12 +236,12 @@ const char index_html[] PROGMEM = R"rawliteral(
     .copy-btn:hover{background:#e9ecef;border-color:#999}
     .copy-btn:active{background:#dee2e6;transform:scale(0.95)}
     /* 半踏范围滑动标志样式 */
-    .half-marker{position:absolute;left:-8px;width:76px;height:4px;background:#ff9800;cursor:ns-resize;z-index:10;opacity:0.8;border-radius:2px}
+    .half-marker{position:absolute;left:0;width:60px;height:4px;background:#ff9800;cursor:ns-resize;z-index:10;opacity:0.8;border-radius:2px}
     .half-marker:hover{opacity:1;background:#f57c00}
-    .half-marker::after{content:attr(data-val);position:absolute;right:-4px;top:-18px;font-size:10px;color:#ff9800;font-weight:600}
+    .half-marker-val{position:absolute;left:-50px;width:45px;text-align:right;font-size:10px;color:#ff9800;font-weight:600;pointer-events:none}
     .half-marker.upper{background:#2196f3}
     .half-marker.upper:hover{background:#1976d2}
-    .half-marker.upper::after{color:#2196f3}
+    .half-marker.upper .half-marker-val{color:#2196f3}
     .half-zone{position:absolute;left:0;width:100%;background:rgba(255,152,0,0.15);pointer-events:none}
     .half-label{font-size:11px;color:#ff9800;margin-top:4px}
     /* 设置区域样式 */
@@ -187,6 +249,14 @@ const char index_html[] PROGMEM = R"rawliteral(
     .settings-row{display:flex;align-items:center;gap:12px;margin:8px 0}
     .settings-label{font-size:13px;color:#444;min-width:100px}
     .settings-select{padding:6px 10px;border:1px solid #ccc;border-radius:4px;font-size:13px;background:#fff;cursor:pointer;min-width:80px}
+    /* 开关样式 */
+    .toggle-switch{position:relative;width:50px;height:26px}
+    .toggle-switch input{opacity:0;width:0;height:0}
+    .toggle-slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:#ccc;transition:0.3s;border-radius:26px}
+    .toggle-slider:before{position:absolute;content:"";height:20px;width:20px;left:3px;bottom:3px;background-color:white;transition:0.3s;border-radius:50%}
+    .toggle-switch input:checked + .toggle-slider{background-color:#4caf50}
+    .toggle-switch input:checked + .toggle-slider:before{transform:translateX(24px)}
+    .toggle-status{font-size:12px;color:#666;margin-left:8px}
   </style>
 </head>
 <body>
@@ -218,12 +288,12 @@ const char index_html[] PROGMEM = R"rawliteral(
         <div style="flex:1;text-align:center">
           <div class="pedal-label" id="v0_label">弱音踏板</div>
           <div class="vprogress" id="v0"><div class="vmax">0</div><i></i><div class="vmin">0</div></div>
-          <div class="small" id="v0_txt">0 mV</div>
+          <div class="small" id="v0_txt">输出: 0 mV</div>
         </div>
         <div style="flex:1;text-align:center">
           <div class="pedal-label" id="v1_label">持音踏板</div>
           <div class="vprogress" id="v1"><div class="vmax">0</div><i></i><div class="vmin">0</div></div>
-          <div class="small" id="v1_txt">0 mV</div>
+          <div class="small" id="v1_txt">输出: 0 mV</div>
         </div>
         <div style="flex:1;text-align:center">
           <div class="pedal-label" id="v2_label">延音踏板</div>
@@ -233,10 +303,10 @@ const char index_html[] PROGMEM = R"rawliteral(
             <div class="vmin">0</div>
             <!-- 半踏范围滑动标志 -->
             <div class="half-zone" id="halfZone"></div>
-            <div class="half-marker lower" id="halfLower" data-val="1500"></div>
-            <div class="half-marker upper" id="halfUpper" data-val="2500"></div>
+            <div class="half-marker lower" id="halfLower"><span class="half-marker-val" id="halfLowerVal">1500</span></div>
+            <div class="half-marker upper" id="halfUpper"><span class="half-marker-val" id="halfUpperVal">2500</span></div>
           </div>
-          <div class="small" id="v2_txt">0 mV</div>
+          <div class="small" id="v2_txt">输出: 0 mV</div>
           <div class="half-label" id="halfLabel">半踏范围: 1500 - 2500 mV</div>
         </div>
       </div>
@@ -244,6 +314,52 @@ const char index_html[] PROGMEM = R"rawliteral(
 
     <!-- 设置区域 -->
     <div class="settings-section">
+      <div class="settings-row">
+        <span class="settings-label">最大输出:</span>
+        <select id="maxDACVoltageSelect" class="settings-select">
+          <option value="0.1">0.1V</option>
+          <option value="0.2">0.2V</option>
+          <option value="0.3">0.3V</option>
+          <option value="0.4">0.4V</option>
+          <option value="0.5">0.5V</option>
+          <option value="0.6">0.6V</option>
+          <option value="0.7">0.7V</option>
+          <option value="0.8">0.8V</option>
+          <option value="0.9">0.9V</option>
+          <option value="1.0">1.0V</option>
+          <option value="1.1">1.1V</option>
+          <option value="1.2">1.2V</option>
+          <option value="1.3">1.3V</option>
+          <option value="1.4">1.4V</option>
+          <option value="1.5">1.5V</option>
+          <option value="1.6">1.6V</option>
+          <option value="1.7">1.7V</option>
+          <option value="1.8">1.8V</option>
+          <option value="1.9" selected>1.9V</option>
+          <option value="2.0">2.0V</option>
+          <option value="2.1">2.1V</option>
+          <option value="2.2">2.2V</option>
+          <option value="2.3">2.3V</option>
+          <option value="2.4">2.4V</option>
+          <option value="2.5">2.5V</option>
+          <option value="2.6">2.6V</option>
+          <option value="2.7">2.7V</option>
+          <option value="2.8">2.8V</option>
+          <option value="2.9">2.9V</option>
+          <option value="3.0">3.0V</option>
+          <option value="3.1">3.1V</option>
+          <option value="3.2">3.2V</option>
+          <option value="3.3">3.3V</option>
+        </select>
+      </div>
+      <div class="settings-row">
+        <span class="settings-label">半踏功能:</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="halfPedalEnabled">
+          <span class="toggle-slider"></span>
+        </label>
+        <span class="toggle-status" id="halfPedalStatus">关闭</span>
+      </div>
       <div class="settings-row">
         <span class="settings-label">半踏电压:</span>
         <select id="voltageSelect" class="settings-select">
@@ -334,12 +450,19 @@ const char index_html[] PROGMEM = R"rawliteral(
     let halfLower = 1500;
     let halfUpper = 2500;
     let halfVoltage = 1.7;
+    let halfEnabled = false;
+    let maxDACVoltage = 1.9;
     const v2Progress = document.getElementById('v2');
     const halfLowerEl = document.getElementById('halfLower');
     const halfUpperEl = document.getElementById('halfUpper');
     const halfZoneEl = document.getElementById('halfZone');
     const halfLabelEl = document.getElementById('halfLabel');
     const voltageSelectEl = document.getElementById('voltageSelect');
+    const halfEnabledEl = document.getElementById('halfPedalEnabled');
+    const halfStatusEl = document.getElementById('halfPedalStatus');
+    const maxDACVoltageSelectEl = document.getElementById('maxDACVoltageSelect');
+    const halfLowerValEl = document.getElementById('halfLowerVal');
+    const halfUpperValEl = document.getElementById('halfUpperVal');
     const minMv = 0;
     const maxMv = 3300;
 
@@ -360,8 +483,9 @@ const char index_html[] PROGMEM = R"rawliteral(
       // lower标志在下方，upper标志在上方
       halfLowerEl.style.bottom = Math.max(0, Math.min(100, lowerPct)) + '%';
       halfUpperEl.style.bottom = Math.max(0, Math.min(100, upperPct)) + '%';
-      halfLowerEl.setAttribute('data-val', halfLower);
-      halfUpperEl.setAttribute('data-val', halfUpper);
+      // 更新数字显示（与滑条水平对齐）
+      halfLowerValEl.textContent = halfLower;
+      halfUpperValEl.textContent = halfUpper;
       
       // 更新半踏区域显示
       halfZoneEl.style.bottom = Math.max(0, lowerPct) + '%';
@@ -369,6 +493,14 @@ const char index_html[] PROGMEM = R"rawliteral(
       halfLabelEl.textContent = '半踏范围: ' + halfLower + ' - ' + halfUpper + ' mV';
       // 设置下拉框选中对应电压
       voltageSelectEl.value = halfVoltage.toFixed(1);
+      maxDACVoltageSelectEl.value = maxDACVoltage.toFixed(1);
+      // 更新开关状态
+      halfEnabledEl.checked = halfEnabled;
+      halfStatusEl.textContent = halfEnabled ? '开启' : '关闭';
+      // 根据开关状态调整半踏区域显示
+      halfZoneEl.style.opacity = halfEnabled ? 1 : 0.3;
+      halfLowerEl.style.opacity = halfEnabled ? 0.8 : 0.3;
+      halfUpperEl.style.opacity = halfEnabled ? 0.8 : 0.3;
     }
 
     // 拖动处理
@@ -422,6 +554,20 @@ const char index_html[] PROGMEM = R"rawliteral(
       fetch('/setHalfPedal?voltage=' + halfVoltage);
     });
 
+    // 最大DAC输出电压选择处理
+    maxDACVoltageSelectEl.addEventListener('change', function() {
+      maxDACVoltage = parseFloat(maxDACVoltageSelectEl.value);
+      fetch('/setMaxDACVoltage?voltage=' + maxDACVoltage);
+    });
+
+    // 半踏功能开关处理
+    halfEnabledEl.addEventListener('change', function() {
+      halfEnabled = halfEnabledEl.checked;
+      halfStatusEl.textContent = halfEnabled ? '开启' : '关闭';
+      fetch('/setHalfPedalEnabled?enabled=' + (halfEnabled ? '1' : '0'));
+      updateHalfMarkers();
+    });
+
     // 网页加载时获取一次半踏设置
     function loadHalfPedalSettings() {
       fetch('/status').then(r=>r.json()).then(j=>{
@@ -430,6 +576,12 @@ const char index_html[] PROGMEM = R"rawliteral(
           halfUpper = j.halfPedal.upper;
           if (j.halfPedal.voltage !== undefined) {
             halfVoltage = j.halfPedal.voltage;
+          }
+          if (j.halfPedal.enabled !== undefined) {
+            halfEnabled = j.halfPedal.enabled === true;
+          }
+          if (j.halfPedal.maxDACVoltage !== undefined) {
+            maxDACVoltage = j.halfPedal.maxDACVoltage;
           }
           updateHalfMarkers();
         }
@@ -446,7 +598,7 @@ const char index_html[] PROGMEM = R"rawliteral(
           const pct = Math.round(p.mapped / 255 * 100);
           const h = Math.max(0, Math.min(100, pct));
           document.querySelector('#v'+i+' > i').style.height = h+'%';
-          document.getElementById('v'+i+'_txt').textContent = p.mv + ' mV';
+          document.getElementById('v'+i+'_txt').textContent = '输出: ' + p.mv + ' mV';
           // 将 min/max 显示在进度条顶部/底部
           const vmaxEl = document.querySelector('#v'+i+' .vmax');
           const vminEl = document.querySelector('#v'+i+' .vmin');
@@ -535,9 +687,11 @@ void handleUpdate()
   else
   {
     server.send(200, "text/plain", "OK");
-    DBG_PRINTLN("/update 返回 200：更新成功或无错误");
+    DBG_PRINTLN("/update 返回 200：更新成功，即将重启...");
+    // 发送响应后延迟重启
+    delay(500);
+    ESP.restart();
   }
-  delay(100);
 }
 
 void handleUpload()
@@ -568,9 +722,8 @@ void handleUpload()
     if (Update.end(true))
     { // 设置大小为当前大小
       DBG_PRINTF("更新成功: %u bytes\n", upload.totalSize);
-      DBG_PRINTLN("执行重启...");
-      delay(100);
-      ESP.restart();
+      DBG_PRINTLN("等待响应发送后重启...");
+      // 不立即重启，等待handleUpdate发送响应
     }
     else
     {
@@ -593,6 +746,8 @@ void otaPortalBegin()
   halfPedalLower_mV = otaPortalGetHalfPedalLower_mV();
   halfPedalUpper_mV = otaPortalGetHalfPedalUpper_mV();
   halfPedalVoltage = otaPortalGetHalfPedalVoltage();
+  halfPedalEnabled = otaPortalGetHalfPedalEnabled();
+  maxDACVoltage = otaPortalGetMaxDACVoltage();
   
   WiFi.mode(WIFI_AP);
   const char *ssid = "钢琴踏板固件更新";
@@ -625,6 +780,8 @@ void otaPortalBegin()
   server.on("/", HTTP_GET, handleRoot);
   server.on("/status", HTTP_GET, handleStatus);
   server.on("/setHalfPedal", HTTP_GET, handleSetHalfPedal);
+  server.on("/setHalfPedalEnabled", HTTP_GET, handleSetHalfPedalEnabled);
+  server.on("/setMaxDACVoltage", HTTP_GET, handleSetMaxDACVoltage);
   server.on("/update", HTTP_POST, handleUpdate, handleUpload);
   // 捕获所有未命中的请求并重定向到根页面，配合 DNS 劫持可以实现 captive-portal 风格自动弹出
   server.onNotFound([]() {
