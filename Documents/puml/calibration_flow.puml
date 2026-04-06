@@ -9,7 +9,7 @@ skinparam arrowFontColor black
 skinparam activityDiamondBorderColor black
 skinparam activityDiamondFontColor white
 skinparam activityBarColor black
-skinparam handwritten false
+!option handwritten false
 'title 校准模式流程
 
 start

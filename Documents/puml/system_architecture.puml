@@ -3,12 +3,17 @@
 skinparam dpi 280
 skinparam backgroundColor transparent
 skinparam defaultFontName Microsoft YaHei UI
+skinparam componentBorderColor black
+skinparam componentBackgroundColor white
+skinparam arrowColor black
+skinparam arrowFontColor black
+skinparam packageBorderColor black
+skinparam packageBackgroundColor white
+skinparam packageFontColor black
+skinparam componentFontColor black
+skinparam componentArrowColor black
 skinparam componentStyle uml2
-skinparam ArrowColor black
-skinparam ComponentBorderColor black
-skinparam ComponentBackgroundColor white
-skinparam PackageBorderColor black
-skinparam PackageBackgroundColor white
+!option handwritten false
 
 title ESP32 钢琴踏板控制器系统架构
 
